@@ -1,0 +1,122 @@
+import { describe, expect, it } from 'vitest'
+import { IPC } from '../src/shared/ipc-channels'
+import {
+  checkIpcMessage,
+  isTrustedLocalUiUrl,
+  mediaSnapshotSchema,
+  type SenderInfo
+} from '../src/shared/ipc-schemas'
+
+const titlebar: SenderInfo = { role: 'titlebar', url: 'app://ui/titlebar.html', isMainFrame: true }
+const settings: SenderInfo = { role: 'settings', url: 'app://ui/settings.html', isMainFrame: true }
+const suno: SenderInfo = { role: 'suno', url: 'https://suno.com/create', isMainFrame: true }
+
+const snapshot = {
+  song: {
+    title: 'Neon Rain',
+    artist: 'Lamp',
+    album: '',
+    artwork: [{ src: 'https://cdn2.suno.ai/image_x.jpeg', sizes: '512x512', type: 'image/jpeg' }]
+  },
+  playbackState: 'playing',
+  position: { duration: 180, position: 12.5, playbackRate: 1 },
+  canGoNext: true,
+  canGoPrevious: false
+}
+
+describe('checkIpcMessage', () => {
+  it('accepts a valid message from the right role', () => {
+    expect(checkIpcMessage(IPC.navBack, titlebar, undefined)).toEqual({
+      ok: true,
+      payload: undefined
+    })
+    expect(checkIpcMessage(IPC.settingsUpdate, settings, { closeToTray: false })).toEqual({
+      ok: true,
+      payload: { closeToTray: false }
+    })
+    expect(checkIpcMessage(IPC.mediaUpdate, suno, snapshot).ok).toBe(true)
+  })
+
+  it('rejects unknown channels', () => {
+    expect(checkIpcMessage('shell:exec', titlebar, 'calc.exe')).toEqual({
+      ok: false,
+      reason: 'unknown channel'
+    })
+    expect(checkIpcMessage('__proto__', titlebar, undefined).ok).toBe(false)
+  })
+
+  it('rejects roles that may not use a channel', () => {
+    expect(checkIpcMessage(IPC.settingsUpdate, titlebar, {}).ok).toBe(false)
+    expect(checkIpcMessage(IPC.sessionClear, suno, undefined).ok).toBe(false)
+    expect(checkIpcMessage(IPC.mediaUpdate, settings, snapshot).ok).toBe(false)
+  })
+
+  it('rejects senders from unexpected origins', () => {
+    const spoofed: SenderInfo = { role: 'suno', url: 'https://evil.example/', isMainFrame: true }
+    expect(checkIpcMessage(IPC.mediaUpdate, spoofed, snapshot)).toEqual({
+      ok: false,
+      reason: 'untrusted sender'
+    })
+    const navigatedAway: SenderInfo = { ...titlebar, url: 'https://suno.com/' }
+    expect(checkIpcMessage(IPC.navBack, navigatedAway, undefined).ok).toBe(false)
+    const unknown: SenderInfo = { role: undefined, url: 'app://ui/x.html', isMainFrame: true }
+    expect(checkIpcMessage(IPC.navBack, unknown, undefined).ok).toBe(false)
+  })
+
+  it('rejects subframes', () => {
+    expect(checkIpcMessage(IPC.mediaUpdate, { ...suno, isMainFrame: false }, snapshot).ok).toBe(
+      false
+    )
+  })
+
+  it('rejects malformed payloads', () => {
+    expect(checkIpcMessage(IPC.navBack, titlebar, { extra: true }).ok).toBe(false)
+    expect(checkIpcMessage(IPC.settingsUpdate, settings, { zoomFactor: 'big' }).ok).toBe(false)
+    expect(
+      checkIpcMessage(IPC.mediaUpdate, suno, { ...snapshot, playbackState: 'exploding' }).ok
+    ).toBe(false)
+  })
+
+  it('only lets settings open links into the project repo', () => {
+    const ok = 'https://github.com/Cat-things/suno-desktop/issues'
+    expect(checkIpcMessage(IPC.appOpenExternal, settings, ok).ok).toBe(true)
+    for (const bad of [
+      'https://github.com/Cat-things/suno-desktop-evil',
+      'https://github.com.evil.example/Cat-things/suno-desktop',
+      'file:///C:/Windows/System32/calc.exe',
+      'https://evil.example/'
+    ]) {
+      expect(checkIpcMessage(IPC.appOpenExternal, settings, bad).ok).toBe(false)
+    }
+  })
+
+  it('allows the dev server only when configured', () => {
+    const dev: SenderInfo = { ...titlebar, url: 'http://localhost:5173/titlebar.html' }
+    expect(checkIpcMessage(IPC.navBack, dev, undefined).ok).toBe(false)
+    expect(
+      checkIpcMessage(IPC.navBack, dev, undefined, { devServerUrl: 'http://localhost:5173' }).ok
+    ).toBe(true)
+  })
+})
+
+describe('mediaSnapshotSchema', () => {
+  it('bounds string sizes and artwork schemes', () => {
+    const long = { ...snapshot, song: { ...snapshot.song, title: 'x'.repeat(600) } }
+    expect(mediaSnapshotSchema.safeParse(long).success).toBe(false)
+    const js = {
+      ...snapshot,
+      song: { ...snapshot.song, artwork: [{ src: 'javascript:alert(1)' }] }
+    }
+    expect(mediaSnapshotSchema.safeParse(js).success).toBe(false)
+    expect(mediaSnapshotSchema.safeParse({ ...snapshot, extra: 1 }).success).toBe(false)
+  })
+})
+
+describe('isTrustedLocalUiUrl', () => {
+  it('trusts app://ui only', () => {
+    expect(isTrustedLocalUiUrl('app://ui/settings.html')).toBe(true)
+    expect(isTrustedLocalUiUrl('app://other/settings.html')).toBe(false)
+    expect(isTrustedLocalUiUrl('file:///C:/settings.html')).toBe(false)
+    expect(isTrustedLocalUiUrl('garbage')).toBe(false)
+  })
+})

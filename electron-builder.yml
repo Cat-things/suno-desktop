@@ -1,0 +1,57 @@
+# electron-builder configuration. Windows release builds run on GitHub Actions (windows-latest).
+appId: com.catthings.sunodesktop
+productName: Suno Desktop
+copyright: Copyright © 2026 Cat-things. Unofficial; not affiliated with Suno, Inc.
+
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - out/**
+  - resources/**
+  - '!resources/*.svg'
+  - package.json
+  - LICENSE
+
+# Runtime icons (tray, thumbnail buttons, notifications) live outside the asar archive.
+asarUnpack:
+  - resources/**
+
+win:
+  icon: build/icon.ico
+  target:
+    # One installer for x64 and arm64: it picks the right build at install time, and a single
+    # latest.yml serves both architectures for auto-updates.
+    - target: nsis
+      arch: [x64, arm64]
+  # Signing happens only when CSC_LINK / CSC_KEY_PASSWORD are set (see .github/workflows/release.yml).
+  signAndEditExecutable: true
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Suno Desktop
+  license: LICENSE
+  include: build/installer.nsh
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  deleteAppDataOnUninstall: false
+  artifactName: Suno-Desktop-Setup-${version}.${ext}
+
+portable:
+  # Built per architecture by scripts/dist-win.mjs; not auto-updatable.
+  artifactName: Suno-Desktop-Portable-${version}-${arch}.${ext}
+
+publish:
+  provider: github
+  owner: Cat-things
+  repo: suno-desktop
+  releaseType: draft
+
+# Also write beta.yml for stable releases so beta users receive newer stable builds.
+generateUpdatesFilesForAllChannels: true

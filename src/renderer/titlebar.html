@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Suno Desktop</title>
+    <link rel="stylesheet" href="./src/styles/base.css" />
+    <link rel="stylesheet" href="./src/styles/titlebar.css" />
+    <script type="module" src="./src/titlebar.ts"></script>
+  </head>
+  <body>
+    <header class="titlebar drag" id="titlebar">
+      <img class="app-icon" id="app-icon" alt="" width="16" height="16" />
+      <nav class="nav no-drag" aria-label="Navigation">
+        <button
+          class="tb-button"
+          id="back"
+          title="Back (Alt+Left)"
+          aria-label="Back"
+          disabled
+        ></button>
+        <button
+          class="tb-button"
+          id="forward"
+          title="Forward (Alt+Right)"
+          aria-label="Forward"
+          disabled
+        ></button>
+        <button class="tb-button" id="reload" title="Reload (Ctrl+R)" aria-label="Reload"></button>
+        <button class="tb-button" id="home" title="Home" aria-label="Home"></button>
+      </nav>
+      <div class="title" id="title">Suno Desktop</div>
+      <button
+        class="tb-button no-drag"
+        id="settings"
+        title="Settings (Ctrl+,)"
+        aria-label="Settings"
+      ></button>
+      <div class="progress" id="progress" hidden></div>
+    </header>
+  </body>
+</html>

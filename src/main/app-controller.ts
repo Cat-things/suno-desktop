@@ -1,0 +1,383 @@
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  nativeTheme,
+  Notification,
+  session,
+  type Session
+} from 'electron'
+import { APP_NAME, SUNO_PARTITION } from '../shared/constants'
+import { IPC, type AppInfo } from '../shared/ipc-channels'
+import type { Settings } from '../shared/settings'
+import iconPath from '../../resources/icon.png?asset'
+import trayIcoPath from '../../resources/tray.ico?asset'
+import trayPngPath from '../../resources/tray.png?asset'
+import { appConfig } from './app-config'
+import { handleAppProtocol } from './app-protocol'
+import { handleDeepLink, registerProtocolClient } from './deep-links'
+import { DownloadManager } from './downloads'
+import { InjectionRegistry } from './injection/registry'
+import { RichPresence } from './integrations/discord/rich-presence'
+import { registerIpcHandlers } from './ipc/handlers'
+import { IpcRouter, RoleRegistry } from './ipc/router'
+import type { Logger } from './logger'
+import { MediaController } from './media/media-controller'
+import { ThumbarButtons } from './media/thumbar'
+import { devServerUrl, isDev, isPortable, rendererRoot } from './paths'
+import { createPluginHost, pluginsDirFor, type PluginHost } from './plugins'
+import { hardenSunoSession } from './security'
+import type { SettingsStore } from './settings-store'
+import { applyLoginItem } from './startup'
+import { AppTray } from './tray'
+import { Updater } from './updater'
+import { WindowStateStore } from './window-state-store'
+import { MainWindow } from './windows/main-window'
+import { SettingsWindow } from './windows/settings-window'
+
+/** Composes the app once Electron is ready. */
+export class AppController {
+  private readonly roles = new RoleRegistry()
+  private readonly media = new MediaController()
+  private readonly injection = new InjectionRegistry()
+  private readonly userData = app.getPath('userData')
+  private readonly windowState: WindowStateStore
+  private readonly sunoSession: Session
+  private readonly mainWindow: MainWindow
+  private readonly settingsWindow: SettingsWindow
+  private readonly tray: AppTray
+  private readonly thumbar: ThumbarButtons
+  private readonly richPresence: RichPresence
+  private readonly updater: Updater
+  private readonly pluginHost: PluginHost
+  private quitting = false
+  private readonly hardwareAccelerationAtLaunch: boolean
+
+  constructor(
+    private readonly settings: SettingsStore,
+    private readonly log: Logger
+  ) {
+    this.hardwareAccelerationAtLaunch = settings.get().hardwareAcceleration
+    handleAppProtocol(rendererRoot(), log.child('protocol'))
+
+    this.sunoSession = session.fromPartition(SUNO_PARTITION)
+    hardenSunoSession(this.sunoSession, {
+      log: log.child('permissions'),
+      getParentWindow: () => this.mainWindow.window
+    })
+    registerProtocolClient(log)
+    applyLoginItem(settings.get(), log)
+
+    const devToolsAllowed = (): boolean => isDev || this.settings.get().allowDevTools
+    this.windowState = new WindowStateStore(this.userData, log)
+    this.settingsWindow = new SettingsWindow({ roles: this.roles, icon: iconPath, devToolsAllowed })
+    this.mainWindow = new MainWindow({
+      settings,
+      windowState: this.windowState,
+      roles: this.roles,
+      session: this.sunoSession,
+      injection: this.injection,
+      log: log.child('window'),
+      icon: iconPath,
+      appVersion: app.getVersion(),
+      devToolsAllowed,
+      openSettings: () => {
+        this.openSettings()
+      },
+      shouldHideOnClose: () => this.settings.get().closeToTray,
+      onHiddenToTray: () => {
+        this.onHiddenToTray()
+      },
+      onQuitRequested: () => {
+        this.quit()
+      }
+    })
+    this.media.setTarget(this.mainWindow.contents)
+
+    this.thumbar = new ThumbarButtons(this.mainWindow.window, (command) => {
+      this.media.command(command)
+    })
+    this.tray = new AppTray({
+      icon: process.platform === 'win32' ? trayIcoPath : trayPngPath,
+      isWindowVisible: () => this.mainWindow.isVisible(),
+      toggleWindow: () => {
+        this.mainWindow.toggleVisibility()
+      },
+      onCommand: (command) => {
+        this.media.command(command)
+      },
+      openSettings: () => {
+        this.openSettings()
+      },
+      quit: () => {
+        this.quit()
+      }
+    })
+
+    new DownloadManager({
+      session: this.sunoSession,
+      settings,
+      getWindow: () => this.mainWindow.window,
+      icon: iconPath,
+      log: log.child('downloads')
+    })
+
+    this.richPresence = new RichPresence({
+      clientId: appConfig.discordClientId,
+      log: log.child('discord'),
+      getPageUrl: () => this.mainWindow.currentUrl()
+    })
+    this.richPresence.setEnabled(settings.get().discordRichPresence)
+
+    this.updater = new Updater(log.child('updater'), { portable: isPortable() })
+    this.updater.on('state', (state) => {
+      this.settingsWindow.contents?.send(IPC.updateState, state)
+      if (state.status === 'downloaded') this.notifyUpdateReady(state.version)
+    })
+
+    this.pluginHost = createPluginHost(
+      {
+        pluginsDir: pluginsDirFor(this.userData),
+        injection: this.injection,
+        session: this.sunoSession,
+        log: log.child('plugins')
+      },
+      () => {
+        this.showPluginsUnavailable()
+      }
+    )
+
+    this.wireEvents()
+    registerIpcHandlers(new IpcRouter(this.roles, { devServerUrl }, log.child('ipc')), {
+      log,
+      mainWindow: this.mainWindow,
+      settings,
+      media: this.media,
+      updater: this.updater,
+      pluginHost: this.pluginHost,
+      openSettings: () => {
+        this.openSettings()
+      },
+      appInfo: () => this.appInfo(),
+      chooseDownloadFolder: () => this.chooseDownloadFolder(),
+      clearSession: () => this.clearSession(),
+      relaunch: () => {
+        this.relaunch()
+      }
+    })
+    this.updater.start(settings.get().updateChannel)
+    this.exposeTestHooks()
+  }
+
+  /** Handles for tests/e2e. Never present in packaged builds. */
+  private exposeTestHooks(): void {
+    if (app.isPackaged || process.env['SUNO_DESKTOP_E2E'] !== '1') return
+    Object.assign(globalThis, {
+      __sunoDesktopE2E: {
+        injection: this.injection,
+        media: this.media,
+        mainWindow: this.mainWindow,
+        openDeepLink: (url: string) => {
+          this.openDeepLink(url)
+        },
+        openSettings: () => {
+          this.openSettings()
+        }
+      }
+    })
+  }
+
+  private wireEvents(): void {
+    const win = this.mainWindow.window
+    this.media.on('changed', (snapshot) => {
+      this.tray.update(snapshot)
+      this.thumbar.update(snapshot)
+      this.richPresence.update(snapshot)
+    })
+    win.on('show', () => {
+      this.tray.refresh()
+      // Thumbnail buttons only stick once the window has a taskbar button.
+      this.thumbar.update(this.media.current, true)
+    })
+    win.on('hide', () => {
+      this.tray.refresh()
+    })
+    this.settings.on('changed', (next, previous) => {
+      this.onSettingsChanged(next, previous)
+    })
+    nativeTheme.on('updated', () => {
+      const theme = nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
+      for (const contents of this.roles.withRole(['titlebar', 'settings', 'offline'])) {
+        contents.send(IPC.themeChanged, theme)
+      }
+    })
+
+    app.on('before-quit', () => {
+      this.quitting = true
+      this.mainWindow.markQuitting()
+      this.settings.flush()
+      this.windowState.flush()
+      this.richPresence.dispose()
+      this.updater.dispose()
+    })
+    app.on('window-all-closed', () => {
+      app.quit()
+    })
+  }
+
+  /** Shows the window unless the app was launched hidden (login item / start minimized). */
+  start(hidden: boolean): void {
+    const win = this.mainWindow.window
+    win.once('ready-to-show', () => {
+      if (!hidden) this.mainWindow.show()
+      else if (!this.settings.get().closeToTray) this.mainWindow.showMinimized()
+      else this.log.info('started hidden in the tray')
+    })
+  }
+
+  showWindow(): void {
+    this.mainWindow.show()
+  }
+
+  openDeepLink(raw: string): void {
+    handleDeepLink(raw, {
+      log: this.log.child('deep-link'),
+      openUrl: (url) => {
+        this.mainWindow.show()
+        this.mainWindow.loadUrl(url)
+      },
+      pluginHost: () => this.pluginHost
+    })
+  }
+
+  openSettings(): void {
+    this.settingsWindow.open()
+  }
+
+  quit(): void {
+    if (!this.quitting) app.quit()
+  }
+
+  private relaunch(): void {
+    const portable = process.env['PORTABLE_EXECUTABLE_FILE']
+    app.relaunch(portable ? { execPath: portable } : undefined)
+    this.quit()
+  }
+
+  private onSettingsChanged(next: Settings, previous: Settings): void {
+    if (
+      next.launchOnStartup !== previous.launchOnStartup ||
+      next.startMinimized !== previous.startMinimized
+    ) {
+      applyLoginItem(next, this.log)
+    }
+    if (next.discordRichPresence !== previous.discordRichPresence) {
+      this.richPresence.setEnabled(next.discordRichPresence)
+      if (next.discordRichPresence) this.richPresence.update(this.media.current)
+    }
+    if (next.zoomFactor !== previous.zoomFactor) this.mainWindow.applyZoom()
+    if (next.updateChannel !== previous.updateChannel) {
+      this.updater.setChannel(next.updateChannel)
+      this.updater.check()
+    }
+    this.settingsWindow.contents?.send(IPC.settingsChanged, next)
+  }
+
+  private onHiddenToTray(): void {
+    this.tray.refresh()
+    if (this.settings.get().trayHintShown || !Notification.isSupported()) return
+    this.settings.update({ trayHintShown: true })
+    new Notification({
+      title: `${APP_NAME} is still running`,
+      body: 'Music keeps playing. Use the tray icon to reopen or quit. You can turn this off in Settings.',
+      icon: iconPath
+    }).show()
+  }
+
+  private notifyUpdateReady(version: string | undefined): void {
+    if (!Notification.isSupported()) return
+    const notification = new Notification({
+      title: 'Update ready',
+      body: `${APP_NAME} ${version ?? ''} will be installed when you quit.`.replace('  ', ' '),
+      icon: iconPath
+    })
+    notification.on('click', () => {
+      this.openSettings()
+    })
+    notification.show()
+  }
+
+  private showPluginsUnavailable(): void {
+    this.mainWindow.show()
+    void dialog.showMessageBox(this.mainWindow.window, {
+      type: 'info',
+      title: APP_NAME,
+      message: "Plugins aren't available yet",
+      detail:
+        'This link is meant for Suno++ plugins. A future version of Suno Desktop will support them.'
+    })
+  }
+
+  private appInfo(): AppInfo {
+    return {
+      name: APP_NAME,
+      version: app.getVersion(),
+      electron: process.versions.electron,
+      chrome: process.versions.chrome,
+      platform: process.platform,
+      arch: process.arch,
+      isPackaged: app.isPackaged,
+      isPortable: isPortable(),
+      pluginsDir: this.pluginHost.pluginsDir,
+      discordConfigured: appConfig.discordClientId !== null,
+      pluginsAvailable: this.pluginHost.available,
+      hardwareAccelerationAtLaunch: this.hardwareAccelerationAtLaunch
+    }
+  }
+
+  private async chooseDownloadFolder(): Promise<Settings> {
+    const parent = this.settingsWindowBrowser()
+    const options: Electron.OpenDialogOptions = {
+      title: 'Choose download folder',
+      defaultPath: this.settings.get().downloadFolder ?? app.getPath('downloads'),
+      properties: ['openDirectory', 'createDirectory']
+    }
+    const result = parent
+      ? await dialog.showOpenDialog(parent, options)
+      : await dialog.showOpenDialog(options)
+    const folder = result.filePaths[0]
+    if (!result.canceled && folder) {
+      return this.settings.update({ downloadFolder: folder, downloadAskWhereToSave: false })
+    }
+    return this.settings.get()
+  }
+
+  private settingsWindowBrowser(): BrowserWindow | undefined {
+    const contents = this.settingsWindow.contents
+    return contents ? (BrowserWindow.fromWebContents(contents) ?? undefined) : undefined
+  }
+
+  private async clearSession(): Promise<boolean> {
+    const parent = this.settingsWindowBrowser()
+    const message: Electron.MessageBoxOptions = {
+      type: 'warning',
+      buttons: ['Clear and log out', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+      title: APP_NAME,
+      message: 'Clear session and log out?',
+      detail:
+        'This signs you out of Suno and removes cookies, cache and site data stored by the app.'
+    }
+    const { response } = parent
+      ? await dialog.showMessageBox(parent, message)
+      : await dialog.showMessageBox(message)
+    if (response !== 0) return false
+    await this.sunoSession.clearStorageData()
+    await this.sunoSession.clearCache()
+    await this.sunoSession.clearAuthCache()
+    this.log.info('session cleared by user')
+    this.mainWindow.goHome()
+    return true
+  }
+}

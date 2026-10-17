@@ -1,0 +1,264 @@
+.titlebar {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-left: 16px;
+  font-size: 12px;
+}
+
+.app-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.layout {
+  position: fixed;
+  inset: 40px 0 0 0;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+}
+
+.sidebar button {
+  position: relative;
+  text-align: left;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  padding: 8px 12px;
+  cursor: default;
+}
+
+.sidebar button:hover {
+  background: var(--subtle-hover);
+}
+
+.sidebar button[aria-selected='true'] {
+  background: var(--subtle-hover);
+  font-weight: 600;
+}
+
+.sidebar button[aria-selected='true']::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.content {
+  overflow-y: auto;
+  padding: 0 32px 32px 16px;
+  user-select: text;
+}
+
+h1 {
+  margin: 8px 0 20px;
+  font: 600 28px/36px var(--font-display);
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-card);
+  margin-bottom: 8px;
+}
+
+.card.info {
+  padding: 16px;
+}
+
+.card.info p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 68px;
+  padding: 12px 16px;
+}
+
+.row + .row {
+  border-top: 1px solid var(--stroke);
+}
+
+.row-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.row-title {
+  font-weight: 400;
+}
+
+.row-desc {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--text-secondary);
+}
+
+.row-desc.path {
+  overflow-wrap: anywhere;
+}
+
+.row-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Windows 11 style toggle switch */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 40px;
+  height: 20px;
+  right: 0;
+  margin: 0;
+}
+
+.toggle .track {
+  width: 40px;
+  height: 20px;
+  border-radius: 10px;
+  border: 1px solid var(--text-secondary);
+  position: relative;
+  transition: background 120ms;
+}
+
+.toggle .track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  transition:
+    left 120ms,
+    background 120ms;
+}
+
+.toggle input:checked + .track {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.toggle input:checked + .track::after {
+  left: 22px;
+  background: var(--accent-text);
+}
+
+.toggle input:disabled + .track {
+  opacity: 0.4;
+}
+
+.toggle input:focus-visible + .track {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.toggle-state {
+  min-width: 24px;
+  text-align: right;
+  font-size: 14px;
+}
+
+.select {
+  min-height: 32px;
+  min-width: 140px;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  border: 1px solid var(--control-stroke);
+  background: var(--control);
+}
+
+.select option {
+  background: Canvas;
+  color: CanvasText;
+}
+
+input[type='range'] {
+  width: 180px;
+  accent-color: var(--accent);
+}
+
+output {
+  min-width: 44px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--stroke);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.about {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+}
+
+.about-icon {
+  width: 64px;
+  height: 64px;
+}
+
+.about-name {
+  font: 600 20px/28px var(--font-display);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.plugin-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 720px) {
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .sidebar {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+}

@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Build and publish (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check tag matches package.json version
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version ${version}"
+            exit 1
+          fi
+
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+      # Optional Authenticode signing. Add WIN_CSC_LINK (base64 .pfx or https URL) and
+      # WIN_CSC_KEY_PASSWORD as repository secrets to sign; without them the build is unsigned.
+      - name: Configure code signing
+        shell: bash
+        env:
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        run: |
+          if [ -n "${WIN_CSC_LINK}" ]; then
+            {
+              echo "CSC_LINK<<CSC_EOF"
+              echo "${WIN_CSC_LINK}"
+              echo "CSC_EOF"
+              echo "CSC_KEY_PASSWORD<<CSC_EOF"
+              echo "${WIN_CSC_KEY_PASSWORD}"
+              echo "CSC_EOF"
+            } >> "${GITHUB_ENV}"
+            echo "Code signing enabled."
+          else
+            echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "${GITHUB_ENV}"
+            echo "No WIN_CSC_LINK secret; building unsigned."
+          fi
+
+      - name: Build installer + portable exes and upload to a draft release
+        run: node scripts/dist-win.mjs --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Keep artifacts on the workflow run
+        uses: actions/upload-artifact@v6
+        with:
+          name: windows-release
+          path: |
+            dist/*.exe
+            dist/*.yml
+            dist/*.blockmap

@@ -1,0 +1,12 @@
+node_modules/
+out/
+dist/
+coverage/
+*.log
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.tsbuildinfo
+.eslintcache
+test-results/

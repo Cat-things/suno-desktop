@@ -1,0 +1,6 @@
+{
+  "$comment": "Build-time configuration. Replace discord.clientId with the Application ID from https://discord.com/developers/applications (enables Rich Presence). The SUNO_DESKTOP_DISCORD_CLIENT_ID environment variable overrides it at runtime for testing.",
+  "discord": {
+    "clientId": "REPLACE_WITH_DISCORD_APPLICATION_ID"
+  }
+}
