@@ -20,6 +20,14 @@ const log = createLogger(path.join(app.getPath('userData'), 'logs'), {
   toConsole: isDev
 })
 
+// Log instead of Electron's default modal error dialog; the app keeps running where it can.
+process.on('uncaughtException', (error) => {
+  log.error('uncaught exception', error)
+})
+process.on('unhandledRejection', (reason) => {
+  log.error('unhandled rejection', reason)
+})
+
 function bootstrap(): void {
   log.info(`starting ${APP_NAME} ${app.getVersion()} (electron ${process.versions.electron})`)
   const settings = new SettingsStore(app.getPath('userData'), log.child('settings'))

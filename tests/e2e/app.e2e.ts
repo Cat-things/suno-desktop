@@ -3,7 +3,7 @@
  * Google sign-in page are faked by intercepting https inside the app's own session, so the
  * suite is deterministic and never talks to Suno. Screenshots land in test-results/e2e.
  */
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { _electron as electron, type ElectronApplication } from 'playwright-core'
@@ -24,6 +24,7 @@ interface Hooks {
 const root = path.resolve(__dirname, '../..')
 const artifacts = path.join(root, 'test-results', 'e2e')
 let app: ElectronApplication
+let userData = ''
 
 async function waitFor<T>(
   probe: () => Promise<T>,
@@ -95,7 +96,7 @@ async function screenshot(name: string, page: string): Promise<void> {
 
 beforeAll(async () => {
   mkdirSync(artifacts, { recursive: true })
-  const userData = mkdtempSync(path.join(tmpdir(), 'suno-desktop-e2e-'))
+  userData = mkdtempSync(path.join(tmpdir(), 'suno-desktop-e2e-'))
   app = await electron.launch({
     args: [root, ...(process.platform === 'linux' ? ['--no-sandbox'] : [])],
     cwd: root,
@@ -475,5 +476,15 @@ describe('settings window and IPC validation', () => {
     await app.evaluate(({ nativeTheme }) => {
       nativeTheme.themeSource = 'system'
     })
+  })
+})
+
+describe('health', () => {
+  it('logged no errors in the main process', async () => {
+    // Give pending async work (thumbar, tray, theme updates) a moment to surface errors.
+    await new Promise((r) => setTimeout(r, 500))
+    const log = readFileSync(path.join(userData, 'logs', 'main.log'), 'utf8')
+    const errors = log.split('\n').filter((line) => line.includes('[error]'))
+    expect(errors).toEqual([])
   })
 })
