@@ -184,6 +184,12 @@ describe('suno.com bridge', () => {
     expect(bridge['capabilities']).toContain('events.songChanged')
   })
 
+  it('looks like stock Chrome to websites', async () => {
+    const ua = await inSuno<string>('navigator.userAgent')
+    expect(ua).not.toMatch(/Electron|suno-desktop|Suno Desktop/i)
+    expect(ua).toMatch(/Chrome\/\d+\.0\.0\.0 /)
+  })
+
   it('relays navigator.mediaSession to main through validated IPC', async () => {
     const snapshot = await waitFor(
       () =>
@@ -341,12 +347,13 @@ describe('navigation policy', () => {
         urls.some((u) => u.startsWith('https://accounts.google.com/')),
       'auth popup'
     )
-    const popup = await app.evaluate(({ BrowserWindow }) => {
+    const popup = await app.evaluate(async ({ BrowserWindow }) => {
       const win = BrowserWindow.getAllWindows().find((w) =>
         w.webContents.getURL().startsWith('https://accounts.google.com/')
       )
       if (!win) return null
       const result = {
+        bridge: await win.webContents.executeJavaScript('typeof window.sunoDesktop'),
         url: win.webContents.getURL(),
         hasParent: win.getParentWindow() !== null,
         // Shares the persistent suno.com session (cookies from OAuth land where suno.com reads them).
@@ -361,6 +368,8 @@ describe('navigation policy', () => {
     expect(popup?.url).toContain('accounts.google.com/o/oauth2')
     expect(popup?.hasParent).toBe(true)
     expect(popup?.sameSession).toBe(true)
+    // The bridge only exists on suno.com, never on login providers.
+    expect(popup?.bridge).toBe('undefined')
 
     await inSuno(`window.open('https://x.com/intent/post?text=hi', '_blank'); 1`)
     await waitFor(
