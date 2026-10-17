@@ -1,18 +1,60 @@
 name: Release
 
+# Publishes a GitHub release with the installer, portable exes and auto-update files (latest.yml):
+# - automatically on pushes to main once 3 commits have landed since the last release
+#   (the very first push to main releases right away),
+# - when a vX.Y.Z tag is pushed,
+# - or on demand: Actions -> Release -> Run workflow (main only).
+# The version is the last release with the patch bumped, or package.json's version if that is
+# higher. See scripts/release-plan.mjs.
 on:
   push:
+    branches: [main]
     tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 permissions:
   contents: write
 
 jobs:
-  windows:
-    name: Build and publish (Windows)
-    runs-on: windows-latest
+  plan:
+    name: Decide
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.plan.outputs.release }}
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
+      previous_tag: ${{ steps.plan.outputs.previous_tag }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - id: plan
+        run: node scripts/release-plan.mjs
+
+  windows:
+    name: Build and publish ${{ needs.plan.outputs.tag }}
+    needs: plan
+    if: needs.plan.outputs.release == 'true'
+    runs-on: windows-latest
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
+      TAG: ${{ needs.plan.outputs.tag }}
+      PREVIOUS_TAG: ${{ needs.plan.outputs.previous_tag }}
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v5
         with:
@@ -20,52 +62,65 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
-      - name: Check tag matches package.json version
+      # The version lives in tags; stamp it into package.json for this build only.
+      - name: Stamp version
         shell: bash
-        run: |
-          version="$(node -p "require('./package.json').version")"
-          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version ${version}"
-            exit 1
-          fi
+        run: npm pkg set "version=${VERSION}"
 
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
 
-      # Optional Authenticode signing. Add WIN_CSC_LINK (base64 .pfx or https URL) and
-      # WIN_CSC_KEY_PASSWORD as repository secrets to sign; without them the build is unsigned.
-      - name: Configure code signing
+      - name: Build installer and portable exes (unsigned)
+        run: node scripts/dist-win.mjs --publish never
+
+      - name: Collect release files
         shell: bash
-        env:
-          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
-          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
         run: |
-          if [ -n "${WIN_CSC_LINK}" ]; then
-            {
-              echo "CSC_LINK<<CSC_EOF"
-              echo "${WIN_CSC_LINK}"
-              echo "CSC_EOF"
-              echo "CSC_KEY_PASSWORD<<CSC_EOF"
-              echo "${WIN_CSC_KEY_PASSWORD}"
-              echo "CSC_EOF"
-            } >> "${GITHUB_ENV}"
-            echo "Code signing enabled."
+          set -euo pipefail
+          shopt -s nullglob
+          files=(dist/*.exe dist/*.blockmap)
+          for f in dist/*.yml; do
+            [[ "$(basename "$f")" == builder-debug.yml ]] || files+=("$f")
+          done
+          if [[ ! -f dist/latest.yml ]]; then
+            echo "::error::dist/latest.yml is missing; installed apps could not auto-update"
+            exit 1
+          fi
+          printf '%s\n' "${files[@]}" | tee release-files.txt
+
+      - name: Write release notes
+        shell: bash
+        run: node scripts/release-plan.mjs notes "${VERSION}" "${PREVIOUS_TAG}" > release-notes.md
+
+      # Tag the exact commit that was built. Pushes made with GITHUB_TOKEN do not start new
+      # workflow runs, so this does not trigger the tag path of this workflow again.
+      - name: Tag the release commit
+        id: tag
+        shell: bash
+        run: |
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "created=false" >> "${GITHUB_OUTPUT}"
           else
-            echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "${GITHUB_ENV}"
-            echo "No WIN_CSC_LINK secret; building unsigned."
+            git tag "${TAG}" "${GITHUB_SHA}"
+            git push origin "refs/tags/${TAG}"
+            echo "created=true" >> "${GITHUB_OUTPUT}"
           fi
 
-      - name: Build installer + portable exes and upload to a draft release
-        run: node scripts/dist-win.mjs --publish always
+      - name: Publish GitHub release
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mapfile -t files < release-files.txt
+          flags=()
+          if [[ "${VERSION}" == *-* ]]; then flags+=(--prerelease); fi
+          gh release create "${TAG}" "${files[@]}" \
+            --title "Suno Desktop ${TAG}" \
+            --notes-file release-notes.md \
+            --verify-tag "${flags[@]}"
 
-      - name: Keep artifacts on the workflow run
-        uses: actions/upload-artifact@v6
-        with:
-          name: windows-release
-          path: |
-            dist/*.exe
-            dist/*.yml
-            dist/*.blockmap
+      - name: Remove the tag if publishing failed
+        if: failure() && steps.tag.outputs.created == 'true'
+        shell: bash
+        run: git push origin --delete "refs/tags/${TAG}" || true

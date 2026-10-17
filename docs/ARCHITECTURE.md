@@ -101,6 +101,7 @@ Settings migrations: `MIGRATIONS[n]` upgrades version `n` to `n + 1`; invalid fi
 
 - `electron-updater` with the GitHub provider. Stable uses `latest.yml`; beta sets `allowPrerelease` and channel `beta` (`generateUpdatesFilesForAllChannels` makes stable releases visible to beta users). Checks 15 s after launch and every 6 h, downloads in the background and installs on quit or via "Restart to update". Disabled for portable and dev builds.
 - One NSIS installer contains x64 and arm64 so a single `latest.yml` serves both. This roughly doubles the installer size; per-architecture installers would need per-architecture update feeds. Portable exes are built per architecture (`scripts/dist-win.mjs`).
+- Releases are automatic: on every push to `main`, `scripts/release-plan.mjs` counts non-merge commits since the last stable `vX.Y.Z` tag and, at 3 or more (or when no release exists yet), the Release workflow builds unsigned packages with `--publish never`, tags the exact commit it built and publishes with `gh release create`. Versions come from tags (last release + 1 patch, or `package.json` when it is higher); `package.json` is stamped only inside the build. Building first and publishing separately leaves room for a signing step in between.
 - `build/installer.nsh` registers `suno-desktop://` at install time and removes it and the launch-on-startup entry on uninstall (not on update). The app also registers the protocol at runtime, which covers portable builds.
 
 ## Deep links

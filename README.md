@@ -62,7 +62,7 @@ pnpm dist:dir         # unpacked app only, quickest way to try a packaged build
 GitHub Actions builds Windows packages for you:
 
 - **Test builds**: every push to any branch runs [Build Windows](.github/workflows/build-windows.yml), which builds the unsigned installer and both portable exes and attaches them to the run as artifacts (kept for 14 days). You can also start it by hand from the Actions tab.
-- **Releases**: push a tag `v<version>` that matches `package.json` and [Release](.github/workflows/release.yml) uploads the installer, portable exes and `latest.yml` to a **draft** release. Publish the draft to make it visible to auto-update.
+- **Releases**: [Release](.github/workflows/release.yml) publishes a GitHub release (installer, portable exes, `latest.yml` for auto-update) **automatically after every 3 commits on `main`**. It bumps the patch version (0.1.0 → 0.1.1 → …), tags the built commit and writes release notes from the commit list. You can also release right away from Actions → Release → **Run workflow**, or by pushing a `vX.Y.Z` tag (prereleases like `v0.2.0-beta.1` go to the beta channel). To start a new minor or major line, set the new version in `package.json`; the next release uses it.
 
 ### Configuration
 

@@ -29,7 +29,7 @@ On Linux run `xvfb-run -a pnpm test:e2e`. As root, Chromium needs `--no-sandbox`
 
 ## Manual checklist (Windows)
 
-Automated tests cannot cover the real suno.com, Windows shell integration, the installer, updates or Discord. Run through this on Windows 11 (and spot-check Windows 10) before publishing a release. Use a release build from the draft release (or the artifacts of a Build Windows run), not `pnpm dev`.
+Automated tests cannot cover the real suno.com, Windows shell integration, the installer, updates or Discord. Run through this on Windows 11 (and spot-check Windows 10) before publishing a release. Use a published release (or the artifacts of a Build Windows run), not `pnpm dev`.
 
 ### Install and first run
 
@@ -119,7 +119,7 @@ Needs a build with a real Discord application id in `config/app.config.json`, an
 
 ### Auto-update
 
-- [ ] Install version N from a published release. Publish version N+1 (tag `vN+1`, wait for the workflow, publish the draft).
+- [ ] Install version N from a published release. Land 3 commits on `main` (or run Actions → Release → Run workflow) and wait for version N+1 to publish.
 - [ ] Within a minute of launching N, Settings → Updates shows the download, then "ready"; **Restart to update** installs N+1 and you are still signed in.
 - [ ] Beta channel: with a published pre-release (e.g. `v0.2.0-beta.1`), switching to Beta offers it; stable users do not get it.
 - [ ] Portable exe: Settings → Updates says portable builds do not auto-update.
