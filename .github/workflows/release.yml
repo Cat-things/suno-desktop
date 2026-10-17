@@ -37,6 +37,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+          # setup-node would otherwise try to cache pnpm (from package.json), which this job skips.
+          package-manager-cache: false
       - id: plan
         run: node scripts/release-plan.mjs
 
