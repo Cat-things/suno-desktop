@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings – Suno Desktop</title>
+    <link rel="stylesheet" href="./src/styles/base.css" />
+    <link rel="stylesheet" href="./src/styles/settings.css" />
+    <script type="module" src="./src/settings.ts"></script>
+  </head>
+  <body>
+    <header class="titlebar drag">
+      <img class="app-icon" data-app-icon alt="" width="16" height="16" />
+      <span>Settings</span>
+    </header>
+
+    <div class="layout">
+      <nav class="sidebar" role="tablist" aria-label="Settings sections">
+        <button role="tab" data-tab="general">General</button>
+        <button role="tab" data-tab="playback">Playback &amp; Discord</button>
+        <button role="tab" data-tab="downloads">Downloads</button>
+        <button role="tab" data-tab="updates">Updates</button>
+        <button role="tab" data-tab="advanced">Advanced</button>
+        <!-- Slot for Suno++: shown only when the plugin host reports it is available. -->
+        <button role="tab" data-tab="plugins" hidden>Plugins</button>
+        <button role="tab" data-tab="about">About</button>
+      </nav>
+
+      <main class="content">
+        <section role="tabpanel" data-panel="general">
+          <h1>General</h1>
+          <div class="card">
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Launch on startup</div>
+                <div class="row-desc">Start Suno Desktop when you sign in to Windows.</div>
+              </div>
+              <label class="toggle"
+                ><span class="toggle-state"></span
+                ><input type="checkbox" data-setting="launchOnStartup" /><span class="track"></span
+              ></label>
+            </div>
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Start minimized</div>
+                <div class="row-desc">
+                  Open in the tray (or minimized, if close to tray is off).
+                </div>
+              </div>
+              <label class="toggle"
+                ><span class="toggle-state"></span
+                ><input type="checkbox" data-setting="startMinimized" /><span class="track"></span
+              ></label>
+            </div>
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Close to tray</div>
+                <div class="row-desc">
+                  Closing the window keeps music playing in the background.
+                </div>
+              </div>
+              <label class="toggle"
+                ><span class="toggle-state"></span
+                ><input type="checkbox" data-setting="closeToTray" /><span class="track"></span
+              ></label>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Zoom</div>
+                <div class="row-desc">Ctrl + plus / minus / 0 also work in the main window.</div>
+              </div>
+              <div class="row-control">
+                <input type="range" id="zoom" min="50" max="300" step="10" aria-label="Zoom" />
+                <output id="zoom-value">100%</output>
+                <button class="button" id="zoom-reset">Reset</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section role="tabpanel" data-panel="playback" hidden>
+          <h1>Playback &amp; Discord</h1>
+          <div class="card">
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Discord Rich Presence</div>
+                <div class="row-desc" id="discord-desc">
+                  Show the song you're playing on your Discord profile.
+                </div>
+              </div>
+              <label class="toggle"
+                ><span class="toggle-state"></span
+                ><input type="checkbox" data-setting="discordRichPresence" /><span
+                  class="track"
+                ></span
+              ></label>
+            </div>
+          </div>
+          <div class="card info">
+            <div class="row-title">Media controls</div>
+            <p>
+              Keyboard media keys, the Windows media overlay and the taskbar thumbnail buttons
+              control Suno's player. Use the tray icon to play, pause or skip while the window is
+              hidden.
+            </p>
+          </div>
+        </section>
+
+        <section role="tabpanel" data-panel="downloads" hidden>
+          <h1>Downloads</h1>
+          <div class="card">
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Ask where to save each file</div>
+                <div class="row-desc">Off saves straight to the folder below.</div>
+              </div>
+              <label class="toggle"
+                ><span class="toggle-state"></span
+                ><input type="checkbox" data-setting="downloadAskWhereToSave" /><span
+                  class="track"
+                ></span
+              ></label>
+            </div>
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Download folder</div>
+                <div class="row-desc path" id="download-folder"></div>
+              </div>
+              <div class="row-control">
+                <button class="button" id="download-reset">Use Downloads</button>
+                <button class="button" id="download-change">Change…</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section role="tabpanel" data-panel="updates" hidden>
+          <h1>Updates</h1>
+          <div class="card">
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title" id="update-title">Suno Desktop</div>
+                <div class="row-desc" id="update-status">Checking status…</div>
+              </div>
+              <div class="row-control">
+                <button class="button primary" id="update-install" hidden>Restart to update</button>
+                <button class="button" id="update-check">Check for updates</button>
+              </div>
+            </div>
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Update channel</div>
+                <div class="row-desc">
+                  Beta builds get new features first and may be less stable.
+                </div>
+              </div>
+              <select class="select" data-setting="updateChannel" aria-label="Update channel">
+                <option value="stable">Stable</option>
+                <option value="beta">Beta</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section role="tabpanel" data-panel="advanced" hidden>
+          <h1>Advanced</h1>
+          <div class="banner" id="restart-banner" hidden>
+            <span>Restart Suno Desktop to apply the hardware acceleration change.</span>
+            <button class="button primary" id="restart">Restart now</button>
+          </div>
+          <div class="card">
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Hardware acceleration</div>
+                <div class="row-desc">
+                  Turn off if you see a black window or graphics glitches. Requires a restart.
+                </div>
+              </div>
+              <label class="toggle"
+                ><span class="toggle-state"></span
+                ><input type="checkbox" data-setting="hardwareAcceleration" /><span
+                  class="track"
+                ></span
+              ></label>
+            </div>
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Allow developer tools</div>
+                <div class="row-desc">Enables F12 / Ctrl+Shift+I. Only useful for debugging.</div>
+              </div>
+              <label class="toggle"
+                ><span class="toggle-state"></span
+                ><input type="checkbox" data-setting="allowDevTools" /><span class="track"></span
+              ></label>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Clear session and log out</div>
+                <div class="row-desc">
+                  Signs you out of Suno and deletes cookies, cache and site data.
+                </div>
+              </div>
+              <button class="button danger" id="clear-session">Clear session</button>
+            </div>
+          </div>
+        </section>
+
+        <section role="tabpanel" data-panel="plugins" hidden>
+          <h1>Plugins</h1>
+          <div class="card info">
+            <p id="plugins-empty">No plugins installed.</p>
+            <ul class="plugin-list" id="plugin-list"></ul>
+            <p class="row-desc path" id="plugins-dir"></p>
+          </div>
+        </section>
+
+        <section role="tabpanel" data-panel="about" hidden>
+          <h1>About</h1>
+          <div class="card about">
+            <img class="about-icon" data-app-icon alt="" width="64" height="64" />
+            <div>
+              <div class="about-name">Suno Desktop</div>
+              <div class="row-desc" id="about-version"></div>
+              <div class="row-desc" id="about-runtime"></div>
+            </div>
+          </div>
+          <div class="card info">
+            <p>
+              Suno Desktop is an unofficial, open-source app. It is not affiliated with, sponsored
+              by or endorsed by Suno, Inc. "Suno" is a trademark of Suno, Inc.
+            </p>
+            <div class="links">
+              <button class="button" data-link="">GitHub</button>
+              <button class="button" data-link="/issues">Report an issue</button>
+              <button class="button" data-link="/blob/main/LICENSE">License (MIT)</button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

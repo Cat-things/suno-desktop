@@ -34,6 +34,7 @@ export const IPC = {
   settingsChanged: 'settings:changed',
   updateState: 'update:state',
   offlineInfo: 'offline:info',
+  themeChanged: 'ui:theme',
 
   // suno.com preload -> main (send)
   mediaUpdate: 'media:update',
@@ -65,6 +66,8 @@ export interface AppInfo {
   readonly pluginsDir: string
   readonly discordConfigured: boolean
   readonly pluginsAvailable: boolean
+  /** Hardware acceleration as applied at launch; differs from settings until a restart. */
+  readonly hardwareAccelerationAtLaunch: boolean
 }
 
 export type UpdateStatus =

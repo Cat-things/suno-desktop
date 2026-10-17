@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Can't reach Suno</title>
+    <link rel="stylesheet" href="./src/styles/base.css" />
+    <link rel="stylesheet" href="./src/styles/offline.css" />
+    <script type="module" src="./src/offline.ts"></script>
+  </head>
+  <body>
+    <main class="offline">
+      <div class="glyph" id="glyph"></div>
+      <h1 id="heading">Can't reach Suno</h1>
+      <p id="message">Check your internet connection, then try again.</p>
+      <p class="detail" id="detail"></p>
+      <div class="actions">
+        <button class="button primary" id="retry">Try again</button>
+        <button class="button" id="settings">Settings</button>
+      </div>
+      <p class="hint" id="hint" hidden>Reconnected – retrying…</p>
+    </main>
+  </body>
+</html>

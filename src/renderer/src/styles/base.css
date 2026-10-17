@@ -1,0 +1,111 @@
+/*
+ * Theme tokens use light-dark(), resolved from `color-scheme`. Main sets <html data-theme> from
+ * nativeTheme (which follows Windows); prefers-color-scheme is only the fallback.
+ */
+:root {
+  color-scheme: light dark;
+  --font: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-display: 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  --text: light-dark(#1a1a1a, #ffffff);
+  --text-secondary: light-dark(#5f5f5f, #c8c8c8);
+  --text-disabled: light-dark(#a0a0a0, #7a7a7a);
+  --card: light-dark(rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.05));
+  --card-hover: light-dark(rgba(249, 249, 249, 0.6), rgba(255, 255, 255, 0.08));
+  --stroke: light-dark(rgba(0, 0, 0, 0.07), rgba(255, 255, 255, 0.08));
+  --subtle-hover: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.07));
+  --subtle-press: light-dark(rgba(0, 0, 0, 0.09), rgba(255, 255, 255, 0.04));
+  --accent: light-dark(#6b3fe0, #b49cff);
+  --accent-hover: light-dark(#7a52e6, #c3afff);
+  --accent-text: light-dark(#ffffff, #1a1033);
+  --danger: light-dark(#c42b1c, #ff99a4);
+  --focus: light-dark(#1a1a1a, #ffffff);
+  --control: light-dark(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.06));
+  --control-stroke: light-dark(rgba(0, 0, 0, 0.14), rgba(255, 255, 255, 0.1));
+  --radius: 4px;
+  --radius-card: 8px;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  /* Transparent so Mica (or the native window color) shows through. */
+  background: transparent;
+  color: var(--text);
+  font: 14px/20px var(--font);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  overflow: hidden;
+}
+
+button,
+select,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 5px 12px;
+  border: 1px solid var(--control-stroke);
+  border-radius: var(--radius);
+  background: var(--control);
+  cursor: default;
+  white-space: nowrap;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--card-hover);
+}
+
+.button:active:not(:disabled) {
+  background: var(--subtle-press);
+}
+
+.button:disabled {
+  color: var(--text-disabled);
+}
+
+.button.primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--accent-text);
+}
+
+.button.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.button.danger {
+  color: var(--danger);
+}
+
+.drag {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}

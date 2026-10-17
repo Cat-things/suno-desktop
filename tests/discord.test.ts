@@ -115,7 +115,7 @@ describe('buildActivity', () => {
   it('never splits an emoji when truncating', () => {
     const family = '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}'
     const activity = buildActivity(
-      { ...playing, song: { ...playing.song, title: family.repeat(40) } },
+      { ...playing, song: { title: family.repeat(40), artist: 'Lamp', album: '', artwork: [] } },
       { now: 0 }
     )
     const details = activity?.details ?? ''
