@@ -47,11 +47,10 @@ portable:
   # Built per architecture by scripts/dist-win.mjs; not auto-updatable.
   artifactName: Suno-Desktop-Portable-${version}-${arch}.${ext}
 
+# Tells installed apps where to look for updates. CI builds with --publish never and publishes
+# with gh (see .github/workflows/release.yml); releaseType only matters for manual publishing.
 publish:
   provider: github
   owner: Cat-things
   repo: suno-desktop
   releaseType: draft
-
-# Also write beta.yml for stable releases so beta users receive newer stable builds.
-generateUpdatesFilesForAllChannels: true
