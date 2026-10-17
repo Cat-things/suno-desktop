@@ -59,7 +59,10 @@ pnpm dist:win         # NSIS installer (x64 + arm64) and portable exes in dist/
 pnpm dist:dir         # unpacked app only, quickest way to try a packaged build
 ```
 
-Releases are built by GitHub Actions: push a tag `v<version>` that matches `package.json` and the workflow uploads the installer, portable exes and `latest.yml` to a **draft** release. Publish the draft to make it visible to auto-update. Code signing is used when the `WIN_CSC_LINK` and `WIN_CSC_KEY_PASSWORD` secrets are set.
+GitHub Actions builds Windows packages for you:
+
+- **Test builds**: every push to any branch runs [Build Windows](.github/workflows/build-windows.yml), which builds the unsigned installer and both portable exes and attaches them to the run as artifacts (kept for 14 days). You can also start it by hand from the Actions tab.
+- **Releases**: push a tag `v<version>` that matches `package.json` and [Release](.github/workflows/release.yml) uploads the installer, portable exes and `latest.yml` to a **draft** release. Publish the draft to make it visible to auto-update.
 
 ### Configuration
 

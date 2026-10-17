@@ -1,0 +1,89 @@
+name: Build Windows
+
+# Unsigned test builds: the NSIS installer (x64 + arm64) and per-architecture portable exes,
+# uploaded as workflow artifacts. Runs on every branch push and on demand. Tagged releases
+# are built and published by release.yml.
+on:
+  push:
+    branches: ['**']
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'LICENSE'
+  workflow_dispatch:
+
+concurrency:
+  group: build-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Installer + portable (x64, arm64)
+    runs-on: windows-latest
+    env:
+      # Never pick up a certificate from the runner; these builds are intentionally unsigned.
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      - name: Build installer and portable exes
+        run: node scripts/dist-win.mjs --publish never
+
+      - name: Artifact names
+        id: meta
+        shell: bash
+        run: |
+          echo "suffix=$(node -p "require('./package.json').version")-${GITHUB_SHA::7}" >> "${GITHUB_OUTPUT}"
+
+      # Executables are already compressed, so skip zip compression to keep uploads fast.
+      - name: Upload installer
+        uses: actions/upload-artifact@v6
+        with:
+          name: Suno-Desktop-Setup-${{ steps.meta.outputs.suffix }}
+          path: dist/Suno-Desktop-Setup-*.exe
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+      - name: Upload portable (x64)
+        uses: actions/upload-artifact@v6
+        with:
+          name: Suno-Desktop-Portable-x64-${{ steps.meta.outputs.suffix }}
+          path: dist/Suno-Desktop-Portable-*-x64.exe
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+      - name: Upload portable (arm64)
+        uses: actions/upload-artifact@v6
+        with:
+          name: Suno-Desktop-Portable-arm64-${{ steps.meta.outputs.suffix }}
+          path: dist/Suno-Desktop-Portable-*-arm64.exe
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+      - name: Summary
+        shell: bash
+        run: |
+          {
+            echo "### Unsigned Windows builds"
+            echo
+            echo "| File | Size |"
+            echo "| --- | --- |"
+            for f in dist/*.exe; do
+              echo "| $(basename "$f") | $(du -h "$f" | cut -f1) |"
+            done
+            echo
+            echo "Download them from the artifacts below. Windows SmartScreen will warn because they are not signed."
+          } >> "${GITHUB_STEP_SUMMARY}"

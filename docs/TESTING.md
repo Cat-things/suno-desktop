@@ -2,12 +2,12 @@
 
 ## Automated
 
-| Command                                            | What it covers                                                    | Where it runs in CI              |
-| -------------------------------------------------- | ----------------------------------------------------------------- | -------------------------------- |
-| `pnpm test`                                        | Unit tests (Vitest) for all pure logic                            | Ubuntu                           |
-| `pnpm test:e2e` (after `pnpm build`)               | The built app driven by Playwright against a fake suno.com        | Ubuntu (Xvfb) and windows-latest |
-| `pnpm lint`, `pnpm typecheck`, `pnpm format:check` | ESLint (strict type-checked), `tsc` for main/preload/UI, Prettier | Ubuntu                           |
-| `electron-builder --win dir`                       | Packaging an unpacked Windows app                                 | windows-latest                   |
+| Command                                            | What it covers                                                     | Where it runs in CI              |
+| -------------------------------------------------- | ------------------------------------------------------------------ | -------------------------------- |
+| `pnpm test`                                        | Unit tests (Vitest) for all pure logic                             | Ubuntu                           |
+| `pnpm test:e2e` (after `pnpm build`)               | The built app driven by Playwright against a fake suno.com         | Ubuntu (Xvfb) and windows-latest |
+| `pnpm lint`, `pnpm typecheck`, `pnpm format:check` | ESLint (strict type-checked), `tsc` for main/preload/UI, Prettier  | Ubuntu                           |
+| Build Windows workflow                             | NSIS installer and portable exes (unsigned), uploaded as artifacts | windows-latest, every push       |
 
 **Unit tests** (`tests/*.test.ts`): URL allowlist and popup policy, deep link parser, settings schema and migrations, IPC contracts (sender roles, origins, payloads), media snapshot sanitizing, keyboard shortcuts, user agent cleanup, permission policy, download file names, `app://` path resolution, window layout and state, injection registry, Discord framing and presence.
 
@@ -29,7 +29,7 @@ On Linux run `xvfb-run -a pnpm test:e2e`. As root, Chromium needs `--no-sandbox`
 
 ## Manual checklist (Windows)
 
-Automated tests cannot cover the real suno.com, Windows shell integration, the installer, updates or Discord. Run through this on Windows 11 (and spot-check Windows 10) before publishing a release. Use a release build from the draft release, not `pnpm dev`.
+Automated tests cannot cover the real suno.com, Windows shell integration, the installer, updates or Discord. Run through this on Windows 11 (and spot-check Windows 10) before publishing a release. Use a release build from the draft release (or the artifacts of a Build Windows run), not `pnpm dev`.
 
 ### Install and first run
 
