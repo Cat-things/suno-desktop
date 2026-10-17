@@ -353,7 +353,7 @@ describe('navigation policy', () => {
       )
       if (!win) return null
       const result = {
-        bridge: await win.webContents.executeJavaScript('typeof window.sunoDesktop'),
+        bridge: (await win.webContents.executeJavaScript('typeof window.sunoDesktop')) as string,
         url: win.webContents.getURL(),
         hasParent: win.getParentWindow() !== null,
         // Shares the persistent suno.com session (cookies from OAuth land where suno.com reads them).
