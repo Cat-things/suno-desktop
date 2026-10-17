@@ -1,0 +1,4 @@
+# Single-package repo; this file only carries pnpm settings.
+# Electron 44 fetches its binary lazily on first launch, so no install scripts are needed.
+ignoredBuiltDependencies:
+  - electron-winstaller
