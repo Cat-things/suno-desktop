@@ -1,0 +1,22 @@
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Pitch an idea for Suno Desktop and see what others think. Once it's taken shape, it can become a feature request.
+
+        Ideas that change suno.com's own pages (the Create form, library, player) fit better in [Plugin ideas](https://github.com/Cat-things/suno-desktop/discussions/categories/plugin-ideas).
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      placeholder: A mini player window that stays on top while I work.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why would it help?
+      description: Who would use it, and when?
+    validations:
+      required: true

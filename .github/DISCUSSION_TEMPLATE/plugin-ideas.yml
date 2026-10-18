@@ -1,0 +1,35 @@
+labels: ['area: plugins']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas for **Suno++** plugins: things that improve suno.com's pages, in the desktop app and in the browser. Plugins will be made by the community, so your idea might be the one someone builds. The first planned plugin is smarter style recommendations for the Styles box.
+
+        Want to change how Suno looks instead? That's a [theme idea](https://github.com/Cat-things/suno-desktop/discussions/categories/theme-ideas).
+
+        Plugins must play fair: no automating generations and no getting around credits, paywalls or limits.
+  - type: textarea
+    id: idea
+    attributes:
+      label: What should the plugin do?
+      placeholder: Suggest style tags that fit together while I type in the Styles box.
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where on Suno does it work?
+      multiple: true
+      options:
+        - Create page (styles, lyrics, title, sliders, model, personas)
+        - Library
+        - Player
+        - Song pages
+        - Somewhere else
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Anything else?
+      description: Mockups, examples, or plugins you've seen elsewhere.

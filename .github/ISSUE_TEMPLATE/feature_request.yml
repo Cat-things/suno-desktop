@@ -1,0 +1,56 @@
+name: ✨ Feature request
+description: Suggest something new or better for Suno Desktop.
+title: '[Feature]: '
+labels: ['enhancement', 'needs-triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Got an idea? Nice. If it's still rough, [Discussions → Ideas](https://github.com/Cat-things/suno-desktop/discussions/categories/ideas) is a great place to shape it first.
+
+        Heads-up: Suno Desktop wraps the regular suno.com website. Features that change Suno's own pages (the Create form, library, player) or how they look will usually be **Suno++ plugins or themes**, made by the community, rather than part of the app itself. Anything that gets around credits, paywalls or limits is a no.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's the problem or annoyance?
+      description: What are you trying to do, and what gets in the way?
+      placeholder: I keep losing track of which song is playing when the window is hidden…
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: What would you like to happen?
+      placeholder: Show the current song in the tray tooltip and a notification when it changes.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Anything you've tried or considered instead?
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the app?
+      multiple: true
+      options:
+        - Window, title bar or theme
+        - Playback and media controls
+        - Tray
+        - Downloads
+        - Discord Rich Presence
+        - Settings
+        - Updates
+        - Plugins (Suno++)
+        - Themes (Suno++)
+        - First-launch welcome
+        - Something else
+  - type: dropdown
+    id: plugin
+    attributes:
+      label: Could this be a Suno++ plugin or theme instead?
+      description: Plugins and themes can change suno.com's pages without touching the app itself.
+      options:
+        - Not sure
+        - 'Yes, it changes how suno.com works or looks'
+        - 'No, it needs the desktop app'

@@ -1,0 +1,77 @@
+name: 🔑 Sign-in problem
+description: You can't log in to Suno inside the app.
+title: '[Sign-in]: '
+labels: ['bug', 'area: sign-in', 'needs-triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Sorry you're stuck! Google sometimes refuses sign-ins from desktop apps, see the [sign-in notes](https://github.com/Cat-things/suno-desktop#-signing-in). If that's what's happening, another sign-in option should still work.
+
+        **Never share your password, verification codes or cookies here.**
+  - type: dropdown
+    id: provider
+    attributes:
+      label: How are you signing in?
+      options:
+        - Google
+        - Apple
+        - Discord
+        - Microsoft
+        - Facebook
+        - LINE
+        - Phone number (SMS)
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happens?
+      description: Copy any error message exactly. A screenshot helps (hide your email or phone number).
+      placeholder: After choosing my Google account I get "This browser or app may not be secure"…
+    validations:
+      required: true
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Does the same sign-in work on suno.com in your normal browser?
+      options:
+        - 'Yes, it works in the browser'
+        - 'No, it fails there too'
+        - Haven't tried
+    validations:
+      required: true
+  - type: dropdown
+    id: popup
+    attributes:
+      label: Where did the sign-in page open?
+      options:
+        - In the main window
+        - In a separate pop-up window
+        - In my default browser
+        - Nothing opened
+        - Not sure
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Shown in Settings → About.
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: windows
+    attributes:
+      label: Windows version
+      options:
+        - Windows 11
+        - Windows 10
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: The end of `%APPDATA%\Suno Desktop\logs\main.log`, with anything personal removed.
+      render: text

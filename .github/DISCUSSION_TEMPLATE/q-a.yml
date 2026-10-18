@@ -1,0 +1,25 @@
+labels: ['question']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ask anything about using or building Suno Desktop. Check the [README FAQ](https://github.com/Cat-things/suno-desktop#-faq) first; your answer might already be there.
+
+        Questions about your Suno account, credits or songs are for Suno's support at [help.suno.com](https://help.suno.com).
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      placeholder: How do I make downloads go straight into my Music folder?
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: What have you tried so far?
+  - type: input
+    id: version
+    attributes:
+      label: App version (if it matters)
+      description: Shown in Settings → About.
+      placeholder: 0.1.0

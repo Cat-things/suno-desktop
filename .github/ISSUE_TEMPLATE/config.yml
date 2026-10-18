@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Questions and help
+    url: https://github.com/Cat-things/suno-desktop/discussions/categories/q-a
+    about: Not sure it's a bug? Ask in Discussions first.
+  - name: 💡 Ideas, plugin and theme wishes
+    url: https://github.com/Cat-things/suno-desktop/discussions/categories/ideas
+    about: Talk through an idea with others before it becomes a feature request.
+  - name: 🔒 Security vulnerability
+    url: https://github.com/Cat-things/suno-desktop/security/advisories/new
+    about: Report security problems privately. Please don't open a public issue.
+  - name: 🎵 Suno account, credits or songs
+    url: https://help.suno.com
+    about: Problems with suno.com itself go to Suno's support. Suno Desktop can't access your account.

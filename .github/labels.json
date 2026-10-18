@@ -1,0 +1,87 @@
+[
+  { "name": "bug", "color": "d73a4a", "description": "Something isn't working" },
+  { "name": "enhancement", "color": "a2eeef", "description": "New feature or improvement" },
+  { "name": "question", "color": "d876e3", "description": "A question rather than a problem" },
+  { "name": "documentation", "color": "0075ca", "description": "README, docs or comments" },
+  {
+    "name": "security",
+    "color": "b60205",
+    "description": "Security hardening. Report vulnerabilities privately (SECURITY.md)"
+  },
+  {
+    "name": "needs-triage",
+    "color": "fbca04",
+    "description": "Waiting for a maintainer to take a look"
+  },
+  {
+    "name": "needs-info",
+    "color": "fef2c0",
+    "description": "Waiting for more details from the reporter"
+  },
+  { "name": "confirmed", "color": "0e8a16", "description": "Reproduced by a maintainer" },
+  {
+    "name": "upstream",
+    "color": "c5def5",
+    "description": "Caused by suno.com, Electron or Chromium rather than this app"
+  },
+  { "name": "duplicate", "color": "cfd3d7", "description": "Already reported" },
+  { "name": "invalid", "color": "e4e669", "description": "Not a problem with Suno Desktop" },
+  { "name": "wontfix", "color": "ffffff", "description": "Not planned" },
+  {
+    "name": "good first issue",
+    "color": "7057ff",
+    "description": "A good place to start contributing"
+  },
+  { "name": "help wanted", "color": "008672", "description": "Extra hands welcome" },
+  {
+    "name": "area: sign-in",
+    "color": "5319e7",
+    "description": "Logging in with Google, Apple, Discord, Microsoft, Facebook, LINE or phone"
+  },
+  {
+    "name": "area: playback",
+    "color": "1d76db",
+    "description": "Media keys, Windows media overlay, taskbar buttons"
+  },
+  { "name": "area: tray", "color": "1d76db", "description": "Tray icon and closing to tray" },
+  {
+    "name": "area: window",
+    "color": "1d76db",
+    "description": "Title bar, Mica, theme, window state, shortcuts"
+  },
+  {
+    "name": "area: downloads",
+    "color": "1d76db",
+    "description": "Saving files, progress, notifications"
+  },
+  { "name": "area: discord", "color": "1d76db", "description": "Discord Rich Presence" },
+  { "name": "area: updates", "color": "1d76db", "description": "Auto-updates and update channels" },
+  { "name": "area: settings", "color": "1d76db", "description": "The settings window" },
+  { "name": "area: deep-links", "color": "1d76db", "description": "suno-desktop:// links" },
+  {
+    "name": "area: onboarding",
+    "color": "1d76db",
+    "description": "The first-launch welcome and theme picker"
+  },
+  {
+    "name": "area: plugins",
+    "color": "b3268f",
+    "description": "Suno++ plugin seams and plugin ideas"
+  },
+  {
+    "name": "area: themes",
+    "color": "ff8a3d",
+    "description": "Suno++ theme seams and theme ideas"
+  },
+  {
+    "name": "area: build",
+    "color": "bfdadc",
+    "description": "CI, installer, portable builds and releases"
+  },
+  {
+    "name": "platform: windows 10",
+    "color": "ededed",
+    "description": "Only happens on Windows 10"
+  },
+  { "name": "platform: arm64", "color": "ededed", "description": "Only happens on ARM64 PCs" }
+]

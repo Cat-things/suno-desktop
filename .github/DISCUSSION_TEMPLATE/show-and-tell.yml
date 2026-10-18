@@ -1,0 +1,12 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share your setup, a theme tweak, a workflow you love, or something you built on top of Suno Desktop. Keep it about the app; share your songs on Suno itself.
+  - type: textarea
+    id: share
+    attributes:
+      label: What are you sharing?
+      description: Screenshots and links welcome.
+    validations:
+      required: true
