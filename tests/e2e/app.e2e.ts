@@ -61,13 +61,32 @@ function inSuno<T>(code: string): Promise<T> {
   }, code)
 }
 
-/** Runs code in the first local UI page whose URL ends with `page`. */
+/**
+ * Runs code in the first local UI page whose URL ends with `page`. Resolves with undefined when
+ * the code ends up closing that page (e.g. finishing the onboarding): executeJavaScript never
+ * settles once its webContents is destroyed, so racing the close would hang the test.
+ */
 function inLocal<T>(page: string, code: string): Promise<T> {
   return app.evaluate(
-    async ({ webContents }, { page: name, js }) => {
+    ({ webContents }, { page: name, js }) => {
       const wc = webContents.getAllWebContents().find((w) => w.getURL().endsWith(name))
       if (!wc) throw new Error(`no webContents for ${name}`)
-      return (await wc.executeJavaScript(js)) as T
+      return new Promise<T>((resolve, reject) => {
+        const onDestroyed = (): void => {
+          resolve(undefined as T)
+        }
+        wc.once('destroyed', onDestroyed)
+        wc.executeJavaScript(js).then(
+          (value: unknown) => {
+            wc.off('destroyed', onDestroyed)
+            resolve(value as T)
+          },
+          (error: unknown) => {
+            wc.off('destroyed', onDestroyed)
+            reject(error instanceof Error ? error : new Error(String(error)))
+          }
+        )
+      })
     },
     { page, js: code }
   )
