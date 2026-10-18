@@ -40,7 +40,7 @@ It checks again 15 seconds after launch and every 6 hours while **Update Suno++ 
 
 **Live changes.** The user's choices (`settings.sunoPlusPlus`: which plugins are on, their settings, the theme and its colors) change through the `sunoplusplus:action` IPC channel, which accepts only a few validated actions (`sppActionSchema`). Each change re-registers the entry; the injector re-runs an entry whose code changed, and the bundle hands the new choices to the Suno++ runtime already on the page. A new Suno++ version does the same: the new bundle takes the current song and playback state from the old runtime, stops it and takes over, **without reloading the page**, so music keeps playing.
 
-**Turning it off** unregisters the entry and runs `SPP_STOP_SCRIPT` once on the open page (`InjectionRegistry.runNow`), which stops the runtime and removes its theme. Nothing of Suno++ runs on later page loads.
+**Turning it off** unregisters the entry and runs `SPP_STOP_SCRIPT` once on the open page (`InjectionRegistry.runNow`), which stops the runtime and removes its theme. Nothing of Suno++ runs on later page loads. The names it relies on are part of Suno++'s contract ([Turning Suno++ off](https://github.com/Cat-things/sunoplusplus/blob/main/docs/DESKTOP.md#turning-suno-off)).
 
 **Trust.** The bundle runs in the isolated plugin world on suno.com: it can do what a browser extension on suno.com could, but gets no Node, no IPC and nothing outside suno.com. Updates are as trustworthy as Suno++'s releases, the same model as the app's own updater: HTTPS from GitHub plus the hashes in `desktop.json`, and everything in a release was reviewed in the Suno++ repository first. Signing releases with a pinned key is a possible next step.
 
