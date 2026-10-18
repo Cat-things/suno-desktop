@@ -5,7 +5,7 @@
 
 import type { MediaCommand, MediaSnapshot } from './media'
 import type { BridgeEventName, BridgeEventMap } from './bridge'
-import type { Settings, SettingsPatch } from './settings'
+import type { Settings, SettingsPatch, ThemeSource } from './settings'
 
 export const IPC = {
   // Local UI -> main (invoke)
@@ -19,6 +19,7 @@ export const IPC = {
   settingsGet: 'settings:get',
   settingsUpdate: 'settings:update',
   settingsChooseDownloadFolder: 'settings:choose-download-folder',
+  settingsResetApp: 'settings:reset-app',
   sessionClear: 'session:clear',
   appGetInfo: 'app:get-info',
   appRelaunch: 'app:relaunch',
@@ -27,7 +28,11 @@ export const IPC = {
   updateInstall: 'update:install',
   updateGetState: 'update:get-state',
   pluginsList: 'plugins:list',
+  themesList: 'themes:list',
   offlineGetInfo: 'offline:get-info',
+  onboardingGetState: 'onboarding:get-state',
+  onboardingSetTheme: 'onboarding:set-theme',
+  onboardingFinish: 'onboarding:finish',
 
   // Main -> local UI (send)
   navState: 'nav:state',
@@ -64,8 +69,10 @@ export interface AppInfo {
   readonly isPackaged: boolean
   readonly isPortable: boolean
   readonly pluginsDir: string
+  readonly themesDir: string
   readonly discordConfigured: boolean
   readonly pluginsAvailable: boolean
+  readonly themesAvailable: boolean
   /** Hardware acceleration as applied at launch; differs from settings until a restart. */
   readonly hardwareAccelerationAtLaunch: boolean
 }
@@ -102,6 +109,20 @@ export interface PluginSummary {
   readonly enabled: boolean
 }
 
+/** A Suno++ theme as listed in the (hidden) Themes tab. The format is defined by Suno++. */
+export interface ThemeSummary {
+  readonly id: string
+  readonly name: string
+  readonly version: string
+  readonly author: string
+  readonly active: boolean
+}
+
+export interface OnboardingState {
+  readonly theme: ThemeSource
+  readonly version: string
+}
+
 export interface BridgeEventMessage<E extends BridgeEventName = BridgeEventName> {
   readonly event: E
   readonly payload: BridgeEventMap[E]
@@ -128,6 +149,8 @@ export interface SunoDesktopUiApi {
     get(): Promise<Settings>
     update(patch: SettingsPatch): Promise<Settings>
     chooseDownloadFolder(): Promise<Settings>
+    /** Resets app settings to defaults (asks first). Suno login and data are kept. */
+    resetApp(): Promise<boolean>
     clearSession(): Promise<boolean>
     onChanged(listener: (settings: Settings) => void): () => void
   }
@@ -139,6 +162,14 @@ export interface SunoDesktopUiApi {
   }
   readonly plugins: {
     list(): Promise<readonly PluginSummary[]>
+  }
+  readonly themes: {
+    list(): Promise<readonly ThemeSummary[]>
+  }
+  readonly onboarding: {
+    getState(): Promise<OnboardingState>
+    setTheme(theme: ThemeSource): Promise<void>
+    finish(): Promise<void>
   }
   readonly offline: {
     getInfo(): Promise<OfflineInfo | null>

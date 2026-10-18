@@ -42,6 +42,7 @@ const api: SunoDesktopUiApi = {
     get: () => invoke(IPC.settingsGet),
     update: (patch) => invoke(IPC.settingsUpdate, patch),
     chooseDownloadFolder: () => invoke(IPC.settingsChooseDownloadFolder),
+    resetApp: () => invoke(IPC.settingsResetApp),
     clearSession: () => invoke(IPC.sessionClear),
     onChanged: (listener) => subscribe(IPC.settingsChanged, listener)
   },
@@ -53,6 +54,14 @@ const api: SunoDesktopUiApi = {
   },
   plugins: {
     list: () => invoke(IPC.pluginsList)
+  },
+  themes: {
+    list: () => invoke(IPC.themesList)
+  },
+  onboarding: {
+    getState: () => invoke(IPC.onboardingGetState),
+    setTheme: (theme) => invoke(IPC.onboardingSetTheme, theme),
+    finish: () => invoke(IPC.onboardingFinish)
   },
   offline: {
     getInfo: () => invoke(IPC.offlineGetInfo),

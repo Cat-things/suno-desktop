@@ -5,7 +5,7 @@ import { z } from 'zod'
  * `migrateSettings`, so anything read from disk passes through here first.
  */
 
-export const SETTINGS_VERSION = 1
+export const SETTINGS_VERSION = 2
 
 export const ZOOM_MIN = 0.5
 export const ZOOM_MAX = 3
@@ -14,7 +14,12 @@ export const ZOOM_STEP = 0.1
 export const updateChannelSchema = z.enum(['stable', 'beta'])
 export type UpdateChannel = z.infer<typeof updateChannelSchema>
 
+/** `system` follows the Windows light/dark setting. Maps to `nativeTheme.themeSource`. */
+export const themeSourceSchema = z.enum(['system', 'light', 'dark'])
+export type ThemeSource = z.infer<typeof themeSourceSchema>
+
 const userSettingsShape = {
+  theme: themeSourceSchema,
   launchOnStartup: z.boolean(),
   startMinimized: z.boolean(),
   closeToTray: z.boolean(),
@@ -35,13 +40,16 @@ export const settingsSchema = z.object({
   version: z.literal(SETTINGS_VERSION),
   ...userSettingsShape,
   /** Internal: the "still running in the tray" toast has been shown once. */
-  trayHintShown: z.boolean()
+  trayHintShown: z.boolean(),
+  /** Internal: the first-launch onboarding was finished (reset by "Reset app settings"). */
+  onboardingCompleted: z.boolean()
 })
 
 export type Settings = z.infer<typeof settingsSchema>
 
 export const DEFAULT_SETTINGS: Settings = Object.freeze({
   version: SETTINGS_VERSION,
+  theme: 'system',
   launchOnStartup: false,
   startMinimized: false,
   closeToTray: true,
@@ -52,7 +60,8 @@ export const DEFAULT_SETTINGS: Settings = Object.freeze({
   zoomFactor: 1,
   updateChannel: 'stable',
   allowDevTools: false,
-  trayHintShown: false
+  trayHintShown: false,
+  onboardingCompleted: false
 })
 
 /**
@@ -72,10 +81,13 @@ export type Migration = (input: Record<string, unknown>) => Record<string, unkno
 
 /**
  * `MIGRATIONS[n]` upgrades a version `n` object to version `n + 1`.
- * Version 0 means "no version field"; no build ever wrote that shape, so it is read as v1.
+ * - 0 -> 1: "no version field"; no build ever wrote that shape, so it is read as v1.
+ * - 1 -> 2: adds `theme` and onboarding. People upgrading from 0.1.x already set the app up,
+ *   so they skip the first-launch onboarding (`theme` falls back to its default, `system`).
  */
 export const MIGRATIONS: Readonly<Record<number, Migration>> = {
-  0: (input) => input
+  0: (input) => input,
+  1: (input) => ({ onboardingCompleted: true, ...input })
 }
 
 export interface MigrationResult {

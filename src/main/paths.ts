@@ -2,7 +2,7 @@ import path from 'node:path'
 import { app } from 'electron'
 import { APP_HOST, APP_SCHEME } from '../shared/constants'
 
-export type LocalPage = 'titlebar' | 'settings' | 'offline'
+export type LocalPage = 'titlebar' | 'settings' | 'offline' | 'onboarding'
 
 export const isDev = !app.isPackaged
 

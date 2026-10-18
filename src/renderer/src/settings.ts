@@ -100,6 +100,9 @@ el('download-reset').addEventListener('click', () => {
 el('clear-session').addEventListener('click', () => {
   void ui.settings.clearSession()
 })
+el('reset-app').addEventListener('click', () => {
+  void ui.settings.resetApp()
+})
 el('restart').addEventListener('click', () => {
   void ui.app.relaunch()
 })
@@ -187,6 +190,20 @@ async function init(): Promise<void> {
       ...plugins.map((p) => {
         const item = document.createElement('li')
         item.textContent = `${p.name} ${p.version}${p.enabled ? '' : ' (disabled)'}`
+        return item
+      })
+    )
+  }
+
+  if (info.themesAvailable) {
+    for (const node of all<HTMLElement>('[data-tab="themes"]')) node.hidden = false
+    el('themes-dir').textContent = `Themes folder: ${info.themesDir}`
+    const themes = await ui.themes.list()
+    el('themes-empty').hidden = themes.length > 0
+    el('theme-list').replaceChildren(
+      ...themes.map((t) => {
+        const item = document.createElement('li')
+        item.textContent = `${t.name} ${t.version} by ${t.author}${t.active ? ' (active)' : ''}`
         return item
       })
     )

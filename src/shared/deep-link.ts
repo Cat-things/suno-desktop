@@ -1,12 +1,16 @@
 import { DEEP_LINK_SCHEME, SUNO_ORIGIN } from './constants'
 
+/** Links reserved for Suno++: `plugin` for plugins, `theme` for themes. */
+export interface ReservedLink<K extends 'plugin' | 'theme'> {
+  readonly kind: K
+  readonly action: string
+  readonly params: Readonly<Record<string, string>>
+}
+
 export type DeepLink =
   | { readonly kind: 'open'; readonly url: string }
-  | {
-      readonly kind: 'plugin'
-      readonly action: string
-      readonly params: Readonly<Record<string, string>>
-    }
+  | ReservedLink<'plugin'>
+  | ReservedLink<'theme'>
   | { readonly kind: 'invalid'; readonly reason: string }
 
 const MAX_LINK_LENGTH = 2048
@@ -41,7 +45,8 @@ export function resolveSunoPath(path: string): string | null {
  * Parses `suno-desktop://` links.
  *
  * - `suno-desktop://open` and `suno-desktop://open?path=/song/xyz` open a suno.com page.
- * - `suno-desktop://plugin/<action>?...` is reserved for Suno++ and is only parsed, never executed.
+ * - `suno-desktop://plugin/<action>?...` and `suno-desktop://theme/<action>?...` are reserved for
+ *   Suno++ plugins and themes. They are only parsed, never executed.
  */
 export function parseDeepLink(raw: string): DeepLink {
   if (raw.length > MAX_LINK_LENGTH) return invalid('link too long')
@@ -69,9 +74,10 @@ export function parseDeepLink(raw: string): DeepLink {
       const target = resolveSunoPath(url.searchParams.get('path') ?? '/')
       return target ? { kind: 'open', url: target } : invalid('path is not a suno.com path')
     }
-    case 'plugin': {
+    case 'plugin':
+    case 'theme': {
       const action = rest.join('/')
-      if (!PLUGIN_ACTION.test(action)) return invalid('bad plugin action')
+      if (!PLUGIN_ACTION.test(action)) return invalid(`bad ${route} action`)
       const entries = [...url.searchParams.entries()]
       if (entries.length > MAX_PLUGIN_PARAMS) return invalid('too many parameters')
       const params: Record<string, string> = {}
@@ -81,7 +87,7 @@ export function parseDeepLink(raw: string): DeepLink {
         }
         params[key] = value
       }
-      return { kind: 'plugin', action, params }
+      return { kind: route, action, params }
     }
     case undefined:
       return invalid('missing route')

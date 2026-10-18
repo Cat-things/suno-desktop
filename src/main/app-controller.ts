@@ -9,7 +9,7 @@ import {
 } from 'electron'
 import { APP_NAME, SUNO_PARTITION } from '../shared/constants'
 import { IPC, type AppInfo } from '../shared/ipc-channels'
-import type { Settings } from '../shared/settings'
+import type { Settings, ThemeSource } from '../shared/settings'
 import iconPath from '../../resources/icon.png?asset'
 import trayIcoPath from '../../resources/tray.ico?asset'
 import trayPngPath from '../../resources/tray.png?asset'
@@ -26,6 +26,7 @@ import { MediaController } from './media/media-controller'
 import { ThumbarButtons } from './media/thumbar'
 import { devServerUrl, isDev, isPortable, rendererRoot } from './paths'
 import { createPluginHost, pluginsDirFor, type PluginHost } from './plugins'
+import { createThemeHost, themesDirFor, type ThemeHost } from './themes'
 import { hardenSunoSession } from './security'
 import type { SettingsStore } from './settings-store'
 import { applyLoginItem } from './startup'
@@ -50,6 +51,7 @@ export class AppController {
   private readonly richPresence: RichPresence
   private readonly updater: Updater
   private readonly pluginHost: PluginHost
+  private readonly themeHost: ThemeHost
   private quitting = false
   private readonly hardwareAccelerationAtLaunch: boolean
 
@@ -58,6 +60,8 @@ export class AppController {
     private readonly log: Logger
   ) {
     this.hardwareAccelerationAtLaunch = settings.get().hardwareAcceleration
+    // Before any window exists, so the first frame already uses the chosen Light / Dark / Auto.
+    nativeTheme.themeSource = settings.get().theme
     handleAppProtocol(rendererRoot(), log.child('protocol'))
 
     this.sunoSession = session.fromPartition(SUNO_PARTITION)
@@ -146,6 +150,16 @@ export class AppController {
         this.showPluginsUnavailable()
       }
     )
+    this.themeHost = createThemeHost(
+      {
+        themesDir: themesDirFor(this.userData),
+        injection: this.injection,
+        log: log.child('themes')
+      },
+      () => {
+        this.showThemesUnavailable()
+      }
+    )
 
     this.wireEvents()
     registerIpcHandlers(new IpcRouter(this.roles, { devServerUrl }, log.child('ipc')), {
@@ -155,14 +169,24 @@ export class AppController {
       media: this.media,
       updater: this.updater,
       pluginHost: this.pluginHost,
+      themeHost: this.themeHost,
       openSettings: () => {
         this.openSettings()
       },
       appInfo: () => this.appInfo(),
       chooseDownloadFolder: () => this.chooseDownloadFolder(),
       clearSession: () => this.clearSession(),
+      resetAppSettings: () => this.resetAppSettings(),
       relaunch: () => {
         this.relaunch()
+      },
+      onboardingState: () => ({ theme: this.settings.get().theme, version: app.getVersion() }),
+      setTheme: (theme: ThemeSource) => {
+        this.settings.update({ theme })
+      },
+      finishOnboarding: () => {
+        this.settings.update({ onboardingCompleted: true })
+        this.mainWindow.hideOnboarding()
       }
     })
     this.updater.start(settings.get().updateChannel)
@@ -174,6 +198,7 @@ export class AppController {
     if (app.isPackaged || process.env['SUNO_DESKTOP_E2E'] !== '1') return
     Object.assign(globalThis, {
       __sunoDesktopE2E: {
+        settings: this.settings,
         injection: this.injection,
         media: this.media,
         mainWindow: this.mainWindow,
@@ -207,7 +232,12 @@ export class AppController {
     })
     nativeTheme.on('updated', () => {
       const theme = nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
-      for (const contents of this.roles.withRole(['titlebar', 'settings', 'offline'])) {
+      for (const contents of this.roles.withRole([
+        'titlebar',
+        'settings',
+        'offline',
+        'onboarding'
+      ])) {
         contents.send(IPC.themeChanged, theme)
       }
     })
@@ -228,8 +258,11 @@ export class AppController {
   /** Shows the window unless the app was launched hidden (login item / start minimized). */
   start(hidden: boolean): void {
     const win = this.mainWindow.window
+    const onboarding = !this.settings.get().onboardingCompleted
+    if (onboarding) this.mainWindow.showOnboarding()
     win.once('ready-to-show', () => {
-      if (!hidden) this.mainWindow.show()
+      // A first launch always shows the window, whatever "start minimized" says.
+      if (!hidden || onboarding) this.mainWindow.show()
       else if (!this.settings.get().closeToTray) this.mainWindow.showMinimized()
       else this.log.info('started hidden in the tray')
     })
@@ -246,7 +279,8 @@ export class AppController {
         this.mainWindow.show()
         this.mainWindow.loadUrl(url)
       },
-      pluginHost: () => this.pluginHost
+      pluginHost: () => this.pluginHost,
+      themeHost: () => this.themeHost
     })
   }
 
@@ -276,6 +310,12 @@ export class AppController {
       if (next.discordRichPresence) this.richPresence.update(this.media.current)
     }
     if (next.zoomFactor !== previous.zoomFactor) this.mainWindow.applyZoom()
+    if (next.theme !== previous.theme) nativeTheme.themeSource = next.theme
+    if (!next.onboardingCompleted && previous.onboardingCompleted) {
+      // "Reset app settings" brings the onboarding back right away.
+      this.mainWindow.show()
+      this.mainWindow.showOnboarding()
+    }
     if (next.updateChannel !== previous.updateChannel) {
       this.updater.setChannel(next.updateChannel)
       this.updater.check()
@@ -318,6 +358,17 @@ export class AppController {
     })
   }
 
+  private showThemesUnavailable(): void {
+    this.mainWindow.show()
+    void dialog.showMessageBox(this.mainWindow.window, {
+      type: 'info',
+      title: APP_NAME,
+      message: "Themes aren't available yet",
+      detail:
+        'This link is meant for Suno++ themes. A future version of Suno Desktop will support them.'
+    })
+  }
+
   private appInfo(): AppInfo {
     return {
       name: APP_NAME,
@@ -329,8 +380,10 @@ export class AppController {
       isPackaged: app.isPackaged,
       isPortable: isPortable(),
       pluginsDir: this.pluginHost.pluginsDir,
+      themesDir: this.themeHost.themesDir,
       discordConfigured: appConfig.discordClientId !== null,
       pluginsAvailable: this.pluginHost.available,
+      themesAvailable: this.themeHost.available,
       hardwareAccelerationAtLaunch: this.hardwareAccelerationAtLaunch
     }
   }
@@ -355,6 +408,32 @@ export class AppController {
   private settingsWindowBrowser(): BrowserWindow | undefined {
     const contents = this.settingsWindow.contents
     return contents ? (BrowserWindow.fromWebContents(contents) ?? undefined) : undefined
+  }
+
+  /**
+   * Puts every app setting back to its default and brings back the onboarding. Suno's own data
+   * (login, cookies, cache) lives in the persist:suno session and is not touched.
+   */
+  private async resetAppSettings(): Promise<boolean> {
+    const parent = this.settingsWindowBrowser()
+    const message: Electron.MessageBoxOptions = {
+      type: 'warning',
+      buttons: ['Reset settings', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+      title: APP_NAME,
+      message: 'Reset Suno Desktop settings?',
+      detail:
+        'All app settings go back to their defaults and the welcome screen runs again. ' +
+        'You stay signed in to Suno, and your songs and downloads are not touched.'
+    }
+    const { response } = parent
+      ? await dialog.showMessageBox(parent, message)
+      : await dialog.showMessageBox(message)
+    if (response !== 0) return false
+    this.settings.reset()
+    this.log.info('app settings reset by user')
+    return true
   }
 
   private async clearSession(): Promise<boolean> {

@@ -14,6 +14,13 @@ export const icons = {
   offline: svg(
     '<path d="M2 2l12 12"/><path d="M5.3 9.2a4 4 0 0 1 2.4-1M3 7a7 7 0 0 1 2.6-1.6M13 7a7 7 0 0 0-4.4-1.9"/><circle cx="8" cy="12" r=".75" fill="currentColor"/>'
   ),
+  headphones: svg(
+    '<path d="M2.5 10V8a5.5 5.5 0 0 1 11 0v2"/><rect x="2" y="9.5" width="3" height="4.5" rx="1.2"/><rect x="11" y="9.5" width="3" height="4.5" rx="1.2"/>'
+  ),
+  music: svg(
+    '<path d="M6 12.5V3.5l7-1.5v9"/><circle cx="4.25" cy="12.5" r="1.75"/><circle cx="11.25" cy="11" r="1.75"/>'
+  ),
+  check: svg('<path d="M3.5 8.5 6.5 11.5 12.5 4.5"/>'),
   warning: svg(
     '<path d="M8 2 14.5 13.5h-13z"/><path d="M8 6.5v3"/><circle cx="8" cy="11.5" r=".5" fill="currentColor"/>'
   )

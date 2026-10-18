@@ -88,6 +88,46 @@ describe('migrateSettings', () => {
   })
 })
 
+describe('defaults and upgrades', () => {
+  it('keeps Discord Rich Presence off until the user opts in', () => {
+    expect(DEFAULT_SETTINGS.discordRichPresence).toBe(false)
+  })
+
+  it('follows the Windows theme and shows onboarding on a fresh install', () => {
+    expect(DEFAULT_SETTINGS.theme).toBe('system')
+    expect(DEFAULT_SETTINGS.onboardingCompleted).toBe(false)
+    expect(migrateSettings(undefined).settings.onboardingCompleted).toBe(false)
+  })
+
+  it('skips onboarding for people upgrading from a v1 settings file', () => {
+    const v1 = {
+      version: 1,
+      launchOnStartup: true,
+      startMinimized: false,
+      closeToTray: false,
+      discordRichPresence: true,
+      downloadAskWhereToSave: true,
+      downloadFolder: null,
+      hardwareAcceleration: true,
+      zoomFactor: 1.2,
+      updateChannel: 'stable',
+      allowDevTools: false,
+      trayHintShown: true
+    }
+    const { settings, changed, warnings } = migrateSettings(v1)
+    expect(settings).toMatchObject({
+      version: SETTINGS_VERSION,
+      onboardingCompleted: true,
+      theme: 'system',
+      closeToTray: false,
+      discordRichPresence: true,
+      zoomFactor: 1.2
+    })
+    expect(changed).toBe(true)
+    expect(warnings).toEqual([])
+  })
+})
+
 describe('settings patches', () => {
   it('accepts user-editable fields', () => {
     const patch = settingsPatchSchema.parse({ closeToTray: false, updateChannel: 'beta' })
@@ -97,9 +137,15 @@ describe('settings patches', () => {
     })
   })
 
+  it('accepts a theme choice and rejects unknown themes', () => {
+    expect(settingsPatchSchema.parse({ theme: 'dark' })).toEqual({ theme: 'dark' })
+    expect(settingsPatchSchema.safeParse({ theme: 'sepia' }).success).toBe(false)
+  })
+
   it('rejects internal fields, unknown fields and arbitrary folders', () => {
     expect(settingsPatchSchema.safeParse({ version: 2 }).success).toBe(false)
     expect(settingsPatchSchema.safeParse({ trayHintShown: true }).success).toBe(false)
+    expect(settingsPatchSchema.safeParse({ onboardingCompleted: true }).success).toBe(false)
     expect(settingsPatchSchema.safeParse({ nope: 1 }).success).toBe(false)
     expect(settingsPatchSchema.safeParse({ downloadFolder: 'C:\\Windows' }).success).toBe(false)
     expect(settingsPatchSchema.safeParse({ downloadFolder: null }).success).toBe(true)

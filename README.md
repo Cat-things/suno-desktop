@@ -40,7 +40,7 @@ Suno in a browser tab gets lost between 40 other tabs, stops when you close the 
   <tr>
     <td width="50%" valign="top">
       <h3>🪟 Feels native</h3>
-      Custom Windows 11 title bar with back, forward, reload and home, snap layouts on the maximize button, Mica on Windows 11 22H2+, and light/dark mode that follows Windows.
+      Custom Windows 11 title bar with back, forward, reload and home, snap layouts on the maximize button, Mica on Windows 11 22H2+, and a Light, Dark or Auto theme you pick on first launch.
     </td>
     <td width="50%" valign="top">
       <h3>🎧 Media keys that just work</h3>
@@ -54,7 +54,7 @@ Suno in a browser tab gets lost between 40 other tabs, stops when you close the 
     </td>
     <td valign="top">
       <h3>🎮 Discord Rich Presence</h3>
-      Opt-in: show what you're listening to with cover art, a progress bar and a <b>Listen on Suno</b> button. <i>Coming to official builds soon.</i>
+      Show what you're listening to with cover art, a progress bar and a <b>Listen on Suno</b> button. Off until you turn it on in Settings.
     </td>
   </tr>
   <tr>
@@ -83,8 +83,8 @@ Suno in a browser tab gets lost between 40 other tabs, stops when you close the 
       <code>suno-desktop://open?path=/song/…</code> opens a song straight in the app.
     </td>
     <td valign="top">
-      <h3>🧩 Plugin-ready</h3>
-      Built with clean hooks for <b>Suno++</b>, the upcoming plugin system for Suno on the web and on desktop.
+      <h3>🧩 Plugins & themes, by the community</h3>
+      Built with clean hooks for <b>Suno++</b>, the upcoming home for community-made plugins and themes for Suno, on the web and on desktop.
     </td>
   </tr>
 </table>
@@ -120,7 +120,7 @@ Suno in a browser tab gets lost between 40 other tabs, stops when you close the 
 
 1. Download **`Suno-Desktop-Setup-<version>.exe`** from the [latest release](https://github.com/Cat-things/suno-desktop/releases/latest). One installer covers both x64 and ARM64 PCs.
 2. Run it and pick where to install.
-3. Sign in to Suno like you normally would. That's it: you stay signed in, and the app keeps itself up to date.
+3. A quick welcome lets you pick Light, Dark or Auto. Then sign in to Suno like you normally would. That's it: you stay signed in, and the app keeps itself up to date.
 
 > [!WARNING]
 > Builds aren't code-signed yet, so Windows SmartScreen will say _"Windows protected your PC"_. Click **More info → Run anyway**. Signing is on the [roadmap](#-roadmap).
@@ -185,13 +185,19 @@ It carries complete x64 and ARM64 builds (each with its own Chromium) so that on
 <details>
 <summary><b>How do I sign out or start fresh?</b></summary>
 <br>
-Settings → Advanced → <b>Clear session and log out</b>. To wipe everything, uninstall the app and delete <code>%APPDATA%\Suno Desktop</code>.
+Settings → Advanced has two buttons. <b>Reset app settings</b> puts every app setting back to default and shows the welcome screen again, but keeps you signed in to Suno. <b>Clear session and log out</b> signs you out and deletes Suno's cookies and cache. To wipe everything, uninstall the app and delete <code>%APPDATA%\Suno Desktop</code>.
 </details>
 
 <details>
 <summary><b>Something's broken. Where are the logs?</b></summary>
 <br>
 <code>%APPDATA%\Suno Desktop\logs\main.log</code>. Attach it to an <a href="https://github.com/Cat-things/suno-desktop/issues">issue</a> along with your Windows version.
+</details>
+
+<details>
+<summary><b>Can I make my own plugins or themes?</b></summary>
+<br>
+Soon. <b>Suno++</b>, the upcoming companion project, will let anyone build and share plugins and themes for Suno, with a marketplace to find them, working both on suno.com and in Suno Desktop. The app already has the hooks for it (see <a href="docs/PLUGIN_HOOKS.md">plugin and theme hooks</a>). Until then, share ideas in <a href="https://github.com/Cat-things/suno-desktop/discussions">Discussions</a>.
 </details>
 
 <details>
@@ -213,10 +219,11 @@ Windows only for now. It may run from source elsewhere, but it isn't built or te
 - [x] Native window, media keys, tray, downloads, offline page
 - [x] Auto-updates with stable and beta channels
 - [x] Automatic releases
-- [ ] Discord Rich Presence switched on in official builds
+- [x] Discord Rich Presence (opt-in)
+- [x] First-launch welcome with Light, Dark and Auto themes
 - [ ] Code signing (no more SmartScreen warning)
 - [ ] A proper app icon
-- [ ] **Suno++**: plugins and a plugin marketplace for Suno, starting with smarter style recommendations
+- [ ] **Suno++**: community-made **plugins and themes** for Suno with a marketplace, starting with smarter style recommendations
 
 ## 🛠️ Build it yourself
 
@@ -259,7 +266,7 @@ pnpm dist:dir         # unpacked app only, the quickest way to try a packaged bu
 <summary><b>Configuration</b></summary>
 <br>
 
-- **Discord Rich Presence** needs a Discord application ID. Create an application in the [Discord Developer Portal](https://discord.com/developers/applications) (its name is what shows after "Listening to"), put the Application ID in [`config/app.config.json`](config/app.config.json), and upload an art asset named `logo` for songs without a cover. For local testing you can set `SUNO_DESKTOP_DISCORD_CLIENT_ID` instead.
+- **Discord Rich Presence** uses the Discord application ID in [`config/app.config.json`](config/app.config.json). Forks can point it at their own application from the [Discord Developer Portal](https://discord.com/developers/applications) (its name is what shows after "Listening to"); upload an art asset named `logo` there for songs without a cover. For local testing you can set `SUNO_DESKTOP_DISCORD_CLIENT_ID` instead. It stays off until the user turns it on.
 - **Icons** are placeholders. Replace `build/icon.svg` and `resources/tray.svg`, then run `pnpm icons`.
 
 </details>
@@ -267,12 +274,17 @@ pnpm dist:dir         # unpacked app only, the quickest way to try a packaged bu
 ## 📚 Docs
 
 - [Architecture](docs/ARCHITECTURE.md): windows, the security model, IPC and how media controls flow
-- [Plugin hooks](docs/PLUGIN_HOOKS.md): the seams Suno++ plugs into
+- [Plugin and theme hooks](docs/PLUGIN_HOOKS.md): the seams Suno++ plugs into
 - [Testing](docs/TESTING.md): what CI checks and the manual Windows checklist
 
-## 🤝 Contributing
+## 🤝 Community
 
-Issues and pull requests are welcome. Before you push, run `pnpm lint && pnpm typecheck && pnpm test`; CI runs those plus end-to-end tests on Linux and Windows.
+- 💬 **Questions, ideas, plugin or theme wishes?** Head to [Discussions](https://github.com/Cat-things/suno-desktop/discussions).
+- 🐛 **Found a bug?** [Open an issue](https://github.com/Cat-things/suno-desktop/issues/new/choose); the form asks for what we need.
+- 🔒 **Security problem?** Report it privately, see [SECURITY.md](SECURITY.md). Please don't open a public issue.
+- 🛠️ **Want to contribute?** Pull requests are welcome. Before you push, run `pnpm lint && pnpm typecheck && pnpm test`; CI runs those plus end-to-end tests on Linux and Windows.
+
+More on where to go in [SUPPORT.md](SUPPORT.md).
 
 ## ⚖️ License
 

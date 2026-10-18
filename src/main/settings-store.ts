@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events'
 import path from 'node:path'
 import {
+  DEFAULT_SETTINGS,
   migrateSettings,
   settingsSchema,
   type Settings,
@@ -40,6 +41,16 @@ export class SettingsStore extends EventEmitter<SettingsEvents> {
     const previous = this.current
     const next = settingsSchema.parse({ ...previous, ...patch })
     if (JSON.stringify(next) === JSON.stringify(previous)) return previous
+    this.current = next
+    this.writer.schedule(next)
+    this.emit('changed', next, previous)
+    return next
+  }
+
+  /** Back to defaults (used by "Reset app settings"). Suno's own data lives elsewhere. */
+  reset(): Settings {
+    const previous = this.current
+    const next = settingsSchema.parse({ ...DEFAULT_SETTINGS })
     this.current = next
     this.writer.schedule(next)
     this.emit('changed', next, previous)

@@ -99,6 +99,36 @@ describe('checkIpcMessage', () => {
   })
 })
 
+describe('onboarding and reset channels', () => {
+  const onboarding: SenderInfo = {
+    role: 'onboarding',
+    url: 'app://ui/onboarding.html',
+    isMainFrame: true
+  }
+
+  it('lets only the onboarding page pick a theme and finish onboarding', () => {
+    expect(checkIpcMessage(IPC.onboardingSetTheme, onboarding, 'dark')).toEqual({
+      ok: true,
+      payload: 'dark'
+    })
+    expect(checkIpcMessage(IPC.onboardingFinish, onboarding, undefined).ok).toBe(true)
+    expect(checkIpcMessage(IPC.onboardingSetTheme, onboarding, 'sepia').ok).toBe(false)
+    expect(checkIpcMessage(IPC.onboardingSetTheme, suno, 'dark').ok).toBe(false)
+    expect(checkIpcMessage(IPC.onboardingFinish, titlebar, undefined).ok).toBe(false)
+  })
+
+  it('does not give onboarding general settings access', () => {
+    expect(checkIpcMessage(IPC.settingsUpdate, onboarding, { closeToTray: false }).ok).toBe(false)
+    expect(checkIpcMessage(IPC.settingsResetApp, onboarding, undefined).ok).toBe(false)
+  })
+
+  it('lets only the settings window reset app settings', () => {
+    expect(checkIpcMessage(IPC.settingsResetApp, settings, undefined).ok).toBe(true)
+    expect(checkIpcMessage(IPC.settingsResetApp, titlebar, undefined).ok).toBe(false)
+    expect(checkIpcMessage(IPC.settingsResetApp, suno, undefined).ok).toBe(false)
+  })
+})
+
 describe('mediaSnapshotSchema', () => {
   it('bounds string sizes and artwork schemes', () => {
     const long = { ...snapshot, song: { ...snapshot.song, title: 'x'.repeat(600) } }

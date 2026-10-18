@@ -51,13 +51,15 @@ export interface MainWindowDeps {
 
 /**
  * The main window: a frameless BrowserWindow whose own webContents renders the local title bar,
- * with suno.com in a WebContentsView underneath and an offline page overlay on top when needed.
+ * with suno.com in a WebContentsView underneath, an offline page overlay on top when needed, and
+ * the first-launch onboarding above everything else.
  */
 export class MainWindow {
   readonly window: BrowserWindow
   readonly view: WebContentsView
   private overlay: WebContentsView | null = null
   private offline: OfflineInfo | null = null
+  private onboarding: WebContentsView | null = null
   private loadFailed = false
   private quitting = false
   private shownOnce = false
@@ -160,7 +162,7 @@ export class MainWindow {
       this.saveState()
     })
     w.on('focus', () => {
-      ;(this.offline ? this.overlay : this.view)?.webContents.focus()
+      this.focusTopView()
     })
     w.on('app-command', (_event, command) => {
       if (command === 'browser-backward') this.back()
@@ -209,6 +211,13 @@ export class MainWindow {
     const bounds = contentViewBounds({ width, height }, TITLEBAR_HEIGHT, this.window.isFullScreen())
     this.view.setBounds(bounds)
     this.overlay?.setBounds(bounds)
+    this.onboarding?.setBounds(bounds)
+  }
+
+  /** Keyboard focus goes to whatever is on top: onboarding, then the offline page, then suno.com. */
+  private focusTopView(): void {
+    const top = this.onboarding ?? (this.offline ? this.overlay : this.view)
+    top?.webContents.focus()
   }
 
   show(): void {
@@ -414,8 +423,9 @@ export class MainWindow {
       void loadLocalPage(overlay.webContents, 'offline')
       this.overlay = overlay
     }
-    // Re-adding moves the view to the top of the stack.
+    // Re-adding moves the view to the top of the stack; onboarding stays above it.
     this.window.contentView.addChildView(this.overlay)
+    if (this.onboarding) this.window.contentView.addChildView(this.onboarding)
     this.overlay.setVisible(true)
     this.layout()
     this.overlay.webContents.send(IPC.offlineInfo, info)
@@ -426,7 +436,40 @@ export class MainWindow {
     if (!this.offline) return
     this.offline = null
     this.overlay?.setVisible(false)
-    this.view.webContents.focus()
+    this.focusTopView()
+  }
+
+  // --- first-launch onboarding --------------------------------------------------------------
+
+  isOnboarding(): boolean {
+    return this.onboarding !== null
+  }
+
+  /** Shows the onboarding over the content area. suno.com keeps loading underneath. */
+  showOnboarding(): void {
+    if (!this.onboarding) {
+      const view = new WebContentsView({ webPreferences: localUiWebPreferences() })
+      view.setBackgroundColor(windowBackground(nativeTheme.shouldUseDarkColors, false))
+      this.deps.roles.assign(view.webContents, 'onboarding')
+      view.webContents.on('before-input-event', (event, input) => {
+        this.handleInput(event, input)
+      })
+      void loadLocalPage(view.webContents, 'onboarding')
+      this.onboarding = view
+    }
+    this.window.contentView.addChildView(this.onboarding)
+    this.layout()
+    this.onboarding.webContents.focus()
+  }
+
+  /** Removes the onboarding view entirely; it is rarely needed again. */
+  hideOnboarding(): void {
+    const view = this.onboarding
+    if (!view) return
+    this.onboarding = null
+    this.window.contentView.removeChildView(view)
+    view.webContents.close()
+    this.focusTopView()
   }
 
   // --- input, zoom, theme -----------------------------------------------------------------
@@ -494,5 +537,6 @@ export class MainWindow {
     if (!this.mica) this.window.setBackgroundColor(windowBackground(dark, false))
     this.view.setBackgroundColor(dark ? '#000000' : '#ffffff')
     this.overlay?.setBackgroundColor(windowBackground(dark, false))
+    this.onboarding?.setBackgroundColor(windowBackground(dark, false))
   }
 }

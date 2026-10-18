@@ -30,7 +30,8 @@ export default defineConfig({
         input: {
           titlebar: resolve(__dirname, 'src/renderer/titlebar.html'),
           settings: resolve(__dirname, 'src/renderer/settings.html'),
-          offline: resolve(__dirname, 'src/renderer/offline.html')
+          offline: resolve(__dirname, 'src/renderer/offline.html'),
+          onboarding: resolve(__dirname, 'src/renderer/onboarding.html')
         }
       }
     }

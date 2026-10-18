@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import type { Session } from 'electron'
-import type { DeepLink } from '../../shared/deep-link'
+import type { ReservedLink } from '../../shared/deep-link'
 import type { PluginSummary } from '../../shared/ipc-channels'
 import type { InjectionRegistry } from '../injection/registry'
 import type { Logger } from '../logger'
@@ -11,7 +11,7 @@ import type { Logger } from '../logger'
  * See docs/PLUGIN_HOOKS.md.
  */
 
-export type PluginDeepLink = Extract<DeepLink, { kind: 'plugin' }>
+export type PluginDeepLink = ReservedLink<'plugin'>
 
 /** What a host implementation gets from the app. */
 export interface PluginHostContext {

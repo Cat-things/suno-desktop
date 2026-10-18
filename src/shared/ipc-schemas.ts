@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { APP_HOST, APP_SCHEME, REPO_URL } from './constants'
 import { IPC, type IpcChannel } from './ipc-channels'
-import { settingsPatchSchema } from './settings'
+import { settingsPatchSchema, themeSourceSchema } from './settings'
 import { isSunoAppUrl } from './url-policy'
 
 /**
@@ -9,7 +9,7 @@ import { isSunoAppUrl } from './url-policy'
  * renderer roles may use it and the payload shape; anything else is dropped.
  */
 
-export type SenderRole = 'titlebar' | 'settings' | 'offline' | 'suno'
+export type SenderRole = 'titlebar' | 'settings' | 'offline' | 'onboarding' | 'suno'
 
 const noPayload = z.undefined()
 
@@ -67,7 +67,7 @@ interface Contract {
   readonly payload: z.ZodType
 }
 
-const LOCAL: readonly SenderRole[] = ['titlebar', 'settings', 'offline']
+const LOCAL: readonly SenderRole[] = ['titlebar', 'settings', 'offline', 'onboarding']
 
 /** Channels main listens on. Main -> renderer channels are not listed: they are never received. */
 export const IPC_CONTRACTS = {
@@ -81,6 +81,7 @@ export const IPC_CONTRACTS = {
   [IPC.settingsGet]: { roles: ['settings'], payload: noPayload },
   [IPC.settingsUpdate]: { roles: ['settings'], payload: settingsPatchSchema },
   [IPC.settingsChooseDownloadFolder]: { roles: ['settings'], payload: noPayload },
+  [IPC.settingsResetApp]: { roles: ['settings'], payload: noPayload },
   [IPC.sessionClear]: { roles: ['settings'], payload: noPayload },
   [IPC.appGetInfo]: { roles: LOCAL, payload: noPayload },
   [IPC.appRelaunch]: { roles: ['settings'], payload: noPayload },
@@ -89,7 +90,11 @@ export const IPC_CONTRACTS = {
   [IPC.updateInstall]: { roles: ['settings'], payload: noPayload },
   [IPC.updateGetState]: { roles: ['settings'], payload: noPayload },
   [IPC.pluginsList]: { roles: ['settings'], payload: noPayload },
+  [IPC.themesList]: { roles: ['settings'], payload: noPayload },
   [IPC.offlineGetInfo]: { roles: ['offline'], payload: noPayload },
+  [IPC.onboardingGetState]: { roles: ['onboarding'], payload: noPayload },
+  [IPC.onboardingSetTheme]: { roles: ['onboarding'], payload: themeSourceSchema },
+  [IPC.onboardingFinish]: { roles: ['onboarding'], payload: noPayload },
   [IPC.mediaUpdate]: { roles: ['suno'], payload: mediaSnapshotSchema }
 } as const satisfies Partial<Record<IpcChannel, Contract>>
 

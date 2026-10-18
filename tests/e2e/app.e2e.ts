@@ -10,10 +10,12 @@ import { _electron as electron, type ElectronApplication } from 'playwright-core
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { InjectionRegistry } from '../../src/main/injection/registry'
 import type { MediaController } from '../../src/main/media/media-controller'
+import type { SettingsStore } from '../../src/main/settings-store'
 import type { MainWindow } from '../../src/main/windows/main-window'
 import { COVER_ID, FAKE_SUNO_HTML, silentWav } from './fake-suno'
 
 interface Hooks {
+  settings: SettingsStore
   injection: InjectionRegistry
   media: MediaController
   mainWindow: MainWindow
@@ -137,6 +139,87 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await app.close()
+})
+
+function hooks<T>(fn: (h: Hooks) => T): Promise<T> {
+  return app.evaluate((_electron, source) => {
+    const h = (globalThis as unknown as { __sunoDesktopE2E: Hooks }).__sunoDesktopE2E
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval
+    return (new Function('h', `return (${source})(h)`) as (h: Hooks) => T)(h)
+  }, fn.toString())
+}
+
+describe('first launch onboarding', () => {
+  it('covers the window on a fresh install', async () => {
+    expect(await hooks((h) => h.mainWindow.isOnboarding())).toBe(true)
+    expect(await hooks((h) => h.settings.get().onboardingCompleted)).toBe(false)
+    const heading = await waitFor(
+      () =>
+        inLocal<string>(
+          'onboarding.html',
+          `document.querySelector('[data-step="welcome"] h1').textContent`
+        ),
+      (t) => t.length > 0,
+      'onboarding welcome step'
+    )
+    expect(heading).toBe('Welcome to Suno Desktop')
+    await screenshot('onboarding-welcome', 'app://ui/onboarding.html')
+  })
+
+  it('applies the theme picked on the theme step right away', async () => {
+    await inLocal(
+      'onboarding.html',
+      `document.querySelector('[data-step="welcome"] [data-next]').click()`
+    )
+    await inLocal('onboarding.html', `document.querySelector('[data-theme-choice="dark"]').click()`)
+    await waitFor(
+      () =>
+        app.evaluate(({ nativeTheme }) => ({
+          source: nativeTheme.themeSource,
+          dark: nativeTheme.shouldUseDarkColors
+        })),
+      (t) => t.source === 'dark' && t.dark,
+      'dark theme'
+    )
+    expect(await hooks((h) => h.settings.get().theme)).toBe('dark')
+    // The local UI follows via <html data-theme>, including the onboarding page itself.
+    for (const page of ['titlebar.html', 'onboarding.html']) {
+      await waitFor(
+        () => inLocal<string>(page, 'document.documentElement.dataset.theme'),
+        (t) => t === 'dark',
+        `${page} in dark mode`
+      )
+    }
+    await new Promise((r) => setTimeout(r, 400)) // let the step animation settle
+    await screenshot('onboarding-theme', 'app://ui/onboarding.html')
+    await inLocal(
+      'onboarding.html',
+      `document.querySelector('[data-theme-choice="system"]').click()`
+    )
+    await waitFor(
+      () => hooks((h) => h.settings.get().theme),
+      (t) => t === 'system',
+      'auto theme'
+    )
+  })
+
+  it('goes away for good once finished', async () => {
+    await inLocal(
+      'onboarding.html',
+      `document.querySelector('[data-step="theme"] [data-next]').click()`
+    )
+    await inLocal('onboarding.html', `document.querySelector('[data-finish]').click()`)
+    await waitFor(
+      () => hooks((h) => h.mainWindow.isOnboarding()),
+      (v) => !v,
+      'onboarding to close'
+    )
+    expect(await hooks((h) => h.settings.get().onboardingCompleted)).toBe(true)
+    const left = await app.evaluate(({ webContents }) =>
+      webContents.getAllWebContents().some((w) => w.getURL().endsWith('onboarding.html'))
+    )
+    expect(left).toBe(false)
+  })
 })
 
 describe('local UI', () => {
@@ -485,6 +568,60 @@ describe('settings window and IPC validation', () => {
     await app.evaluate(({ nativeTheme }) => {
       nativeTheme.themeSource = 'system'
     })
+  })
+})
+
+describe('reset app settings', () => {
+  it('asks first and does nothing when cancelled', async () => {
+    await app.evaluate(({ dialog }) => {
+      dialog.showMessageBox = () => Promise.resolve({ response: 1, checkboxChecked: false })
+    })
+    const result = await inLocal<boolean>(
+      'settings.html',
+      'window.sunoDesktopUI.settings.resetApp()'
+    )
+    expect(result).toBe(false)
+    expect(await hooks((h) => h.settings.get().zoomFactor)).toBe(1.2)
+  })
+
+  it('restores defaults and the onboarding but keeps Suno signed in', async () => {
+    await app.evaluate(async ({ session }) => {
+      await session
+        .fromPartition('persist:suno')
+        .cookies.set({ url: 'https://suno.com', name: '__e2e_login', value: 'kept' })
+    })
+    await app.evaluate(({ dialog }) => {
+      dialog.showMessageBox = () => Promise.resolve({ response: 0, checkboxChecked: false })
+    })
+    const result = await inLocal<boolean>(
+      'settings.html',
+      'window.sunoDesktopUI.settings.resetApp()'
+    )
+    expect(result).toBe(true)
+    const settings = await hooks((h) => h.settings.get())
+    expect(settings).toMatchObject({
+      closeToTray: true,
+      zoomFactor: 1,
+      theme: 'system',
+      discordRichPresence: false,
+      onboardingCompleted: false
+    })
+    await waitFor(() => hooks((h) => h.mainWindow.isOnboarding()), Boolean, 'onboarding again')
+    const cookies = await app.evaluate(({ session }) =>
+      session.fromPartition('persist:suno').cookies.get({ name: '__e2e_login' })
+    )
+    expect(cookies.map((c) => c.value)).toEqual(['kept'])
+    await waitFor(
+      () => inLocal<boolean>('onboarding.html', `!!document.querySelector('[data-skip]')`),
+      Boolean,
+      'onboarding page'
+    )
+    await inLocal('onboarding.html', `document.querySelector('[data-skip]').click()`)
+    await waitFor(
+      () => hooks((h) => h.mainWindow.isOnboarding()),
+      (v) => !v,
+      'skip onboarding'
+    )
   })
 })
 

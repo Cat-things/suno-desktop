@@ -9,7 +9,7 @@
 | `pnpm lint`, `pnpm typecheck`, `pnpm format:check` | ESLint (strict type-checked), `tsc` for main/preload/UI, Prettier  | Ubuntu                           |
 | Build Windows workflow                             | NSIS installer and portable exes (unsigned), uploaded as artifacts | windows-latest, every push       |
 
-**Unit tests** (`tests/*.test.ts`): URL allowlist and popup policy, deep link parser, settings schema and migrations, IPC contracts (sender roles, origins, payloads), media snapshot sanitizing, keyboard shortcuts, user agent cleanup, permission policy, download file names, `app://` path resolution, window layout and state, injection registry, Discord framing and presence.
+**Unit tests** (`tests/*.test.ts`): URL allowlist and popup policy, deep link parser (open, plugin and theme routes), settings schema and migrations (defaults such as Discord off, the v1 → v2 upgrade, which fields are patchable), IPC contracts (sender roles, origins, payloads), media snapshot sanitizing, keyboard shortcuts, user agent cleanup, permission policy, download file names, `app://` path resolution, window layout and state, injection registry, Discord framing and presence.
 
 **End-to-end tests** (`tests/e2e/app.e2e.ts`) launch the real app with an isolated user-data folder and intercept `https` inside the app's own `persist:suno` session, so suno.com, its CDN and Google sign-in are served by a small fake page that uses `navigator.mediaSession`. Nothing talks to Suno. They check:
 
@@ -21,9 +21,11 @@
 - non-allowlisted links go to `shell.openExternal`, OAuth popups open as child windows on the same session, deep links navigate and malicious paths are ignored;
 - the offline page appears on a failed load and disappears after **Try again**;
 - the settings window applies valid patches, rejects invalid ones and wrong-role callers, and zoom reaches the suno.com view;
+- a fresh profile shows the onboarding on top of suno.com; picking Dark switches the title bar and onboarding to dark right away, finishing saves the theme and hides it, and the next launch skips it;
+- **Reset app settings** does nothing when cancelled; when confirmed it restores the defaults and shows the onboarding again, while the suno.com cookies stay in place;
 - the main process log has no errors (on Windows this covers creating the tray and taskbar thumbnail buttons).
 
-Screenshots of the title bar, settings (light and dark) and offline page are written to `test-results/e2e` and uploaded as CI artifacts.
+Screenshots of the title bar, settings (light and dark), offline page and onboarding (welcome and theme steps) are written to `test-results/e2e` and uploaded as CI artifacts.
 
 On Linux run `xvfb-run -a pnpm test:e2e`. As root, Chromium needs `--no-sandbox`, which the suite passes on Linux.
 
@@ -36,10 +38,12 @@ Automated tests cannot cover the real suno.com, Windows shell integration, the i
 - [ ] Installer runs; SmartScreen warning appears for unsigned builds and **Run anyway** works.
 - [ ] Installer offers per-user install and a custom folder; Start menu and desktop shortcuts are created.
 - [ ] On an ARM64 device the installer installs the ARM64 build (Task Manager → Details → Architecture).
+- [ ] First launch shows the welcome over suno.com. The theme step offers Auto, Light and Dark; each one applies instantly to the title bar, the welcome and suno.com. **Start listening** (or **Skip setup**) closes it and the next launch goes straight to suno.com.
+- [ ] Discord Rich Presence is off after a fresh install.
 - [ ] App opens on suno.com with the custom title bar: icon, back, forward, reload, home, page title, settings, native minimize / maximize / close.
 - [ ] Windows 11 22H2+: Mica behind the title bar. Windows 10: solid title bar, no glitches.
 - [ ] Hovering maximize shows snap layouts; dragging the title bar moves the window; double-click maximizes.
-- [ ] Switching Windows between light and dark mode updates the title bar, caption buttons and settings window without a restart.
+- [ ] With the theme on Auto, switching Windows between light and dark mode updates the title bar, caption buttons and settings window without a restart. Settings → General → Theme set to Light or Dark overrides Windows.
 - [ ] Resize, move, maximize, close and reopen: size, position, maximized state and zoom are restored. Unplug a second monitor the window was on: it reopens on the primary monitor.
 - [ ] Uninstall removes the app and the `suno-desktop://` registration; reinstalling keeps you signed in (user data is kept).
 
@@ -83,6 +87,7 @@ Use Win+R or a browser address bar.
 - [ ] Same with the app running (and minimized to tray): the existing window comes to front and navigates; no second instance.
 - [ ] `suno-desktop://open?path=//example.com` is ignored.
 - [ ] `suno-desktop://plugin/install?id=test` shows "Plugins aren't available yet".
+- [ ] `suno-desktop://theme/install?id=test` shows "Themes aren't available yet".
 - [ ] Launching the app a second time from the Start menu focuses the existing window.
 
 ### Downloads
@@ -110,6 +115,7 @@ Needs a build with a real Discord application id in `config/app.config.json`, an
 - [ ] Launch on startup + start minimized: after signing in to Windows the app is in the tray only.
 - [ ] Hardware acceleration off: restart banner appears, **Restart now** relaunches, the app still renders.
 - [ ] Zoom slider matches Ctrl+Plus/Minus and persists.
+- [ ] Advanced → **Reset app settings**: Cancel changes nothing. Reset puts every setting back to its default (theme Auto, Discord off, tray and startup defaults), shows the welcome again, and you are **still signed in** to Suno.
 - [ ] About page shows the version and the "not affiliated with Suno, Inc." notice; links open GitHub in the browser.
 
 ### Offline

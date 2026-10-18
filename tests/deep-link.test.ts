@@ -69,7 +69,16 @@ describe('parseDeepLink', () => {
     })
   })
 
+  it('parses reserved theme links without acting on them', () => {
+    expect(parseDeepLink('suno-desktop://theme/install?id=midnight')).toEqual({
+      kind: 'theme',
+      action: 'install',
+      params: { id: 'midnight' }
+    })
+  })
+
   it.each([
+    ['suno-desktop://theme', 'bad theme action'],
     ['suno-desktop://plugin', 'bad plugin action'],
     ['suno-desktop://plugin/Bad_Action!', 'bad plugin action'],
     ['suno-desktop://plugin/a/b', 'bad plugin action'],

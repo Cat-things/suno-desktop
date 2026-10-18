@@ -21,14 +21,28 @@
         <button role="tab" data-tab="downloads">Downloads</button>
         <button role="tab" data-tab="updates">Updates</button>
         <button role="tab" data-tab="advanced">Advanced</button>
-        <!-- Slot for Suno++: shown only when the plugin host reports it is available. -->
+        <!-- Slots for Suno++: shown only when the plugin / theme hosts report they are available. -->
         <button role="tab" data-tab="plugins" hidden>Plugins</button>
+        <button role="tab" data-tab="themes" hidden>Themes</button>
         <button role="tab" data-tab="about">About</button>
       </nav>
 
       <main class="content">
         <section role="tabpanel" data-panel="general">
           <h1>General</h1>
+          <div class="card">
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Theme</div>
+                <div class="row-desc">Auto follows your Windows light or dark setting.</div>
+              </div>
+              <select class="select" data-setting="theme" aria-label="Theme">
+                <option value="system">Auto</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+            </div>
+          </div>
           <div class="card">
             <div class="row">
               <div class="row-text">
@@ -199,6 +213,16 @@
           <div class="card">
             <div class="row">
               <div class="row-text">
+                <div class="row-title">Reset app settings</div>
+                <div class="row-desc">
+                  Puts every setting back to its default and shows the welcome screen again. You
+                  stay signed in to Suno.
+                </div>
+              </div>
+              <button class="button" id="reset-app">Reset settings</button>
+            </div>
+            <div class="row">
+              <div class="row-text">
                 <div class="row-title">Clear session and log out</div>
                 <div class="row-desc">
                   Signs you out of Suno and deletes cookies, cache and site data.
@@ -215,6 +239,15 @@
             <p id="plugins-empty">No plugins installed.</p>
             <ul class="plugin-list" id="plugin-list"></ul>
             <p class="row-desc path" id="plugins-dir"></p>
+          </div>
+        </section>
+
+        <section role="tabpanel" data-panel="themes" hidden>
+          <h1>Themes</h1>
+          <div class="card info">
+            <p id="themes-empty">No themes installed.</p>
+            <ul class="plugin-list" id="theme-list"></ul>
+            <p class="row-desc path" id="themes-dir"></p>
           </div>
         </section>
 

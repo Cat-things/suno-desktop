@@ -1,9 +1,10 @@
-import { IPC, type AppInfo } from '../../shared/ipc-channels'
-import type { Settings } from '../../shared/settings'
+import { IPC, type AppInfo, type OnboardingState } from '../../shared/ipc-channels'
+import type { Settings, ThemeSource } from '../../shared/settings'
 import type { Logger } from '../logger'
 import type { MediaController } from '../media/media-controller'
 import { openExternalSafely } from '../navigation'
 import type { PluginHost } from '../plugins'
+import type { ThemeHost } from '../themes'
 import type { SettingsStore } from '../settings-store'
 import type { Updater } from '../updater'
 import type { MainWindow } from '../windows/main-window'
@@ -16,11 +17,16 @@ export interface IpcContext {
   readonly media: MediaController
   readonly updater: Updater
   readonly pluginHost: PluginHost
+  readonly themeHost: ThemeHost
   readonly openSettings: () => void
   readonly appInfo: () => AppInfo
   readonly chooseDownloadFolder: () => Promise<Settings>
   readonly clearSession: () => Promise<boolean>
+  readonly resetAppSettings: () => Promise<boolean>
   readonly relaunch: () => void
+  readonly onboardingState: () => OnboardingState
+  readonly setTheme: (theme: ThemeSource) => void
+  readonly finishOnboarding: () => void
 }
 
 /** Wires every IPC channel main accepts. Validation happens in the router before these run. */
@@ -50,6 +56,7 @@ export function registerIpcHandlers(router: IpcRouter, ctx: IpcContext): void {
   router.handle(IPC.settingsGet, () => ctx.settings.get())
   router.handle(IPC.settingsUpdate, (patch) => ctx.settings.update(patch))
   router.handle(IPC.settingsChooseDownloadFolder, () => ctx.chooseDownloadFolder())
+  router.handle(IPC.settingsResetApp, () => ctx.resetAppSettings())
   router.handle(IPC.sessionClear, () => ctx.clearSession())
 
   router.handle(IPC.appGetInfo, () => ctx.appInfo())
@@ -69,7 +76,16 @@ export function registerIpcHandlers(router: IpcRouter, ctx: IpcContext): void {
   router.handle(IPC.updateGetState, () => ctx.updater.current)
 
   router.handle(IPC.pluginsList, () => ctx.pluginHost.list())
+  router.handle(IPC.themesList, () => ctx.themeHost.list())
   router.handle(IPC.offlineGetInfo, () => mainWindow.offlineInfo())
+
+  router.handle(IPC.onboardingGetState, () => ctx.onboardingState())
+  router.handle(IPC.onboardingSetTheme, (theme) => {
+    ctx.setTheme(theme)
+  })
+  router.handle(IPC.onboardingFinish, () => {
+    ctx.finishOnboarding()
+  })
 
   router.on(IPC.mediaUpdate, (snapshot) => {
     ctx.media.update(snapshot)

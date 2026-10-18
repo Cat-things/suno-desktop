@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Welcome to Suno Desktop</title>
+    <link rel="stylesheet" href="./src/styles/base.css" />
+    <link rel="stylesheet" href="./src/styles/onboarding.css" />
+    <script type="module" src="./src/onboarding.ts"></script>
+  </head>
+  <body>
+    <main class="onboarding">
+      <ol class="dots" aria-hidden="true">
+        <li></li>
+        <li></li>
+        <li></li>
+      </ol>
+
+      <section class="step" data-step="welcome" aria-labelledby="welcome-title">
+        <img class="hero-icon" data-app-icon alt="" width="96" height="96" />
+        <h1 id="welcome-title">Welcome to Suno Desktop</h1>
+        <p class="lead">Suno, minus the browser tab. Let's set things up. It takes ten seconds.</p>
+        <div class="actions">
+          <button class="button primary large" data-next>Get started</button>
+        </div>
+        <button class="skip" data-skip>Skip setup</button>
+        <p class="fine" id="fine">Unofficial app · not affiliated with Suno, Inc.</p>
+      </section>
+
+      <section class="step" data-step="theme" aria-labelledby="theme-title" hidden>
+        <h1 id="theme-title">Pick your look</h1>
+        <p class="lead">You can change this any time in Settings.</p>
+        <div class="themes" role="radiogroup" aria-labelledby="theme-title">
+          <button class="theme-card" role="radio" aria-checked="false" data-theme-choice="system">
+            <span class="preview preview-auto" aria-hidden="true">
+              <span class="pv pv-light"
+                ><span class="pv-bar"></span><span class="pv-side"></span
+                ><span class="pv-card"></span
+              ></span>
+              <span class="pv pv-dark"
+                ><span class="pv-bar"></span><span class="pv-side"></span
+                ><span class="pv-card"></span
+              ></span>
+            </span>
+            <span class="theme-name">Auto</span>
+            <span class="theme-desc">Follows Windows</span>
+          </button>
+          <button class="theme-card" role="radio" aria-checked="false" data-theme-choice="light">
+            <span class="preview" aria-hidden="true">
+              <span class="pv pv-light"
+                ><span class="pv-bar"></span><span class="pv-side"></span
+                ><span class="pv-card"></span
+              ></span>
+            </span>
+            <span class="theme-name">Light</span>
+            <span class="theme-desc">Bright and clean</span>
+          </button>
+          <button class="theme-card" role="radio" aria-checked="false" data-theme-choice="dark">
+            <span class="preview" aria-hidden="true">
+              <span class="pv pv-dark"
+                ><span class="pv-bar"></span><span class="pv-side"></span
+                ><span class="pv-card"></span
+              ></span>
+            </span>
+            <span class="theme-name">Dark</span>
+            <span class="theme-desc">Easy on the eyes</span>
+          </button>
+        </div>
+        <div class="actions">
+          <button class="button" data-back>Back</button>
+          <button class="button primary" data-next>Continue</button>
+        </div>
+        <button class="skip" data-skip>Skip setup</button>
+      </section>
+
+      <section class="step" data-step="done" aria-labelledby="done-title" hidden>
+        <h1 id="done-title">You're all set</h1>
+        <p class="lead">A few things worth knowing:</p>
+        <ul class="tips">
+          <li>
+            <span class="tip-icon" data-icon="headphones"></span>
+            <span
+              ><b>Your media keys just work.</b> Play, pause and skip from the keyboard, the Windows
+              media overlay or the taskbar thumbnail.</span
+            >
+          </li>
+          <li>
+            <span class="tip-icon" data-icon="music"></span>
+            <span
+              ><b>Closing keeps the music going.</b> Suno Desktop waits in the tray; quit from the
+              tray icon when you're done.</span
+            >
+          </li>
+          <li>
+            <span class="tip-icon" data-icon="settings"></span>
+            <span
+              ><b>Settings are one shortcut away</b> (<kbd>Ctrl</kbd> + <kbd>,</kbd>). Discord Rich
+              Presence lives there too, off until you turn it on.</span
+            >
+          </li>
+        </ul>
+        <div class="actions">
+          <button class="button" data-back>Back</button>
+          <button class="button primary large" data-finish>Start listening</button>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

@@ -5,6 +5,7 @@ import { parseDeepLink } from '../shared/deep-link'
 import type { Logger } from './logger'
 import { executablePath } from './paths'
 import type { PluginHost } from './plugins'
+import type { ThemeHost } from './themes'
 
 /**
  * Registers `suno-desktop://` for the current user. The NSIS installer registers it as well
@@ -27,6 +28,7 @@ export interface DeepLinkTargets {
   readonly log: Logger
   readonly openUrl: (url: string) => void
   readonly pluginHost: () => PluginHost | null
+  readonly themeHost: () => ThemeHost | null
 }
 
 export function handleDeepLink(raw: string, targets: DeepLinkTargets): void {
@@ -38,6 +40,11 @@ export function handleDeepLink(raw: string, targets: DeepLinkTargets): void {
       break
     case 'plugin': {
       const host = targets.pluginHost()
+      if (host) void host.handleDeepLink(link)
+      break
+    }
+    case 'theme': {
+      const host = targets.themeHost()
       if (host) void host.handleDeepLink(link)
       break
     }

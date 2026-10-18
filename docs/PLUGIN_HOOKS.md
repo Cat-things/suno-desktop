@@ -1,17 +1,23 @@
-# Plugin hooks (for Suno++)
+# Plugin and theme hooks (for Suno++)
 
-Suno++ will add a plugin system and marketplace for both suno.com and this app. It lives in a separate repository and defines the plugin format. Suno Desktop only provides seams so Suno++ can plug in without reworking the app.
+**Suno++** is the upcoming companion project that brings **plugins and themes** to Suno, both on suno.com in the browser and in this app, with a marketplace to find and install them. It is built **with the community**: anyone will be able to make and share plugins and themes. Suno++ lives in a separate repository and defines the plugin and theme formats. Suno Desktop does not implement any of it; it only provides seams so Suno++ can plug in later without reworking the app.
 
-**Ground rule:** the core app has no Suno DOM selectors and must not gain any. DOM targeting lives in plugins, so a Suno UI change can break a plugin but never the app.
+- **Plugins** add behavior, for example better style recommendations in the Styles box.
+- **Themes** change how suno.com looks, for example a new color scheme or a more compact library.
 
-| Seam                   | Where                                              | Status                                    |
-| ---------------------- | -------------------------------------------------- | ----------------------------------------- |
-| Plugin host interface  | `src/main/plugins/`                                | Interface + stub (loads nothing)          |
-| Plugins folder         | `%APPDATA%/Suno Desktop/plugins`                   | Created at startup, otherwise unused      |
-| Injection pipeline     | `src/main/injection/`                              | Working, nothing registered by the core   |
-| Page bridge            | `window.sunoDesktop` (`src/preload/page-world.ts`) | Working, read-only                        |
-| Settings "Plugins" tab | `src/renderer/settings.html`                       | Hidden until the host reports `available` |
-| Deep links             | `suno-desktop://plugin/<action>?…`                 | Parsed, routed to the stub                |
+**Ground rule:** the core app has no Suno DOM selectors and must not gain any. DOM targeting lives in plugins and themes, so a Suno UI change can break a plugin or theme but never the app.
+
+| Seam                   | Where                                               | Status                                    |
+| ---------------------- | --------------------------------------------------- | ----------------------------------------- |
+| Plugin host interface  | `src/main/plugins/`                                 | Interface + stub (loads nothing)          |
+| Plugins folder         | `%APPDATA%/Suno Desktop/plugins`                    | Created at startup, otherwise unused      |
+| Injection pipeline     | `src/main/injection/`                               | Working, nothing registered by the core   |
+| Page bridge            | `window.sunoDesktop` (`src/preload/page-world.ts`)  | Working, read-only                        |
+| Settings "Plugins" tab | `src/renderer/settings.html`                        | Hidden until the host reports `available` |
+| Theme host interface   | `src/main/themes/`                                  | Interface + stub (applies nothing)        |
+| Themes folder          | `%APPDATA%/Suno Desktop/themes`                     | Created at startup, otherwise unused      |
+| Settings "Themes" tab  | `src/renderer/settings.html`                        | Hidden until the host reports `available` |
+| Deep links             | `suno-desktop://plugin/…`, `suno-desktop://theme/…` | Parsed, routed to the stubs               |
 
 ## 1. Plugin host
 
@@ -120,17 +126,52 @@ Notes:
 
 Add a capability string whenever the bridge gains something, and never remove or change one without bumping `BRIDGE_API_VERSION` (`src/shared/constants.ts`). Anything that needs the main process (per-plugin storage, notifications, opening links) should become a new IPC channel with its own contract in `src/shared/ipc-schemas.ts`, a dedicated sender role for plugin code and a capability flag, rather than widening what the page world can do.
 
-## 4. Settings tab slot
+## 4. Themes
 
-`settings.html` contains a hidden `Plugins` tab and panel. `src/renderer/src/settings.ts` shows it only when `AppInfo.pluginsAvailable` (from `PluginHost.available`) is true, then fills it from `sunoDesktopUI.plugins.list()` (IPC `plugins:list`, settings window only) along with the plugins folder path.
+Themes get their own host so the app can treat them differently from plugins: only one theme is active at a time, and themes are mostly CSS.
 
-## 5. Deep links
+```ts
+// src/main/themes/theme-host.ts
+interface ThemeHost {
+  readonly themesDir: string // %APPDATA%/Suno Desktop/themes
+  readonly available: boolean // false for the stub; drives the settings Themes tab
+  list(): Promise<readonly ThemeSummary[]> // { id, name, version, author, active }
+  apply(id: string | null): Promise<void> // null = back to Suno's own look
+  active(): string | null
+  handleDeepLink(link: {
+    kind: 'theme'
+    action: string
+    params: Record<string, string>
+  }): Promise<void>
+}
 
-`suno-desktop://plugin/<action>?key=value…` is reserved. The parser (`src/shared/deep-link.ts`) accepts a lowercase action (`[a-z][a-z0-9-]{0,63}`) and up to 20 query parameters of at most 512 characters each, then calls `PluginHost.handleDeepLink`. It never executes anything by itself. A typical future use is `suno-desktop://plugin/install?id=<plugin-id>` from the Suno++ marketplace, which the host should confirm with the user before installing.
+interface ThemeHostContext {
+  readonly themesDir: string
+  readonly injection: InjectionRegistry
+  readonly log: Logger
+}
+```
 
-## 6. Suno surfaces plugins will likely target
+`createThemeHost(context, notifyUnavailable)` in `src/main/themes/index.ts` returns `StubThemeHost` today: `list()` is empty, `apply(id)` rejects with `ThemesUnavailableError`, `apply(null)` clears anything registered under the `theme` owner, and theme deep links show "Themes aren't available yet".
 
-Plugins own the selectors for these. The descriptions reflect suno.com at the time of writing and will drift.
+How a real theme host is expected to work:
+
+- A theme registers its CSS with the [injection pipeline](#2-injection-pipeline) under owner `THEME_INJECTION_OWNER` (`"theme"`). Applying a theme first calls `injection.unregisterOwner('theme')`, so switching themes never leaves old styles behind. CSS follows client-side route changes automatically.
+- Themes may ship optional scripts (for example to add a class to elements CSS cannot reach), using the same `world: 'isolated'` rules as plugins.
+- **Themes are separate from the app's Light / Dark / Auto setting** (`settings.theme`), which styles the app's own window chrome and follows Windows when set to Auto. A Suno++ theme styles suno.com. To match the app, a theme could read `prefers-color-scheme`, which Electron derives from the app setting; that did not reliably reach already-open pages in our Linux tests, so the bridge should grow an explicit capability for it (for example an `appearance` value and an `appearanceChanged` event) before themes rely on it.
+- Theming the app's own chrome (title bar, settings) with Suno++ themes is a possible later step. It would need its own, narrower contract (a set of color tokens rather than arbitrary CSS), because the local UI is privileged.
+
+## 5. Settings tab slots
+
+`settings.html` contains hidden `Plugins` and `Themes` tabs. `src/renderer/src/settings.ts` shows them only when `AppInfo.pluginsAvailable` / `AppInfo.themesAvailable` (from the hosts' `available`) are true, then fills them from `sunoDesktopUI.plugins.list()` / `sunoDesktopUI.themes.list()` (IPC `plugins:list`, `themes:list`, settings window only) along with the folder paths.
+
+## 6. Deep links
+
+`suno-desktop://plugin/<action>?key=value…` and `suno-desktop://theme/<action>?key=value…` are reserved. The parser (`src/shared/deep-link.ts`) accepts a lowercase action (`[a-z][a-z0-9-]{0,63}`) and up to 20 query parameters of at most 512 characters each, then calls `PluginHost.handleDeepLink` or `ThemeHost.handleDeepLink`. It never executes anything by itself. Typical future uses are `suno-desktop://plugin/install?id=<plugin-id>` and `suno-desktop://theme/install?id=<theme-id>` from the Suno++ marketplace, which the host should confirm with the user before installing anything.
+
+## 7. Suno surfaces plugins and themes will likely target
+
+Plugins and themes own the selectors for these. The descriptions reflect suno.com at the time of writing and will drift.
 
 **Create page** (`https://suno.com/create`), the main target:
 
@@ -152,3 +193,7 @@ Suggestions for plugin authors:
 - Use a `MutationObserver` scoped to the relevant container rather than polling.
 - Respect the field limits above, and write into inputs the way a user would (set the value, then dispatch `input`) so Suno's own validation runs.
 - Do not automate generations or work around credits, paywalls or rate limits. The app wraps the website as-is and plugins should too.
+
+## 8. Community
+
+Plugins and themes will come from the community through Suno++. Until Suno++ exists, the best way to help is to share ideas in [Discussions](https://github.com/Cat-things/suno-desktop/discussions) (categories **Plugin ideas** and **Theme ideas**) and to keep the seams above clean. Changes to the seams themselves (new bridge capabilities, new injection options) are welcome as pull requests here.

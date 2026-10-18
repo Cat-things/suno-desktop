@@ -12,9 +12,9 @@ Electron ships full Chromium, so Chrome-extension style content scripts and `ses
 src/
   main/        Electron main process (Node). Owns windows, sessions, IPC, integrations.
   preload/     suno.ts (remote suno.com view) and ui.ts (local UI). Both sandboxed.
-  renderer/    Local UI pages: titlebar.html, settings.html, offline.html (plain TS + CSS).
+  renderer/    Local UI pages: titlebar.html, settings.html, offline.html, onboarding.html (plain TS + CSS).
   shared/      Pure TypeScript shared by all of the above: constants, types, policies, schemas.
-config/        app.config.json (Discord application id placeholder).
+config/        app.config.json (Discord application id).
 resources/     Runtime icons (tray, thumbnail buttons, notifications). Unpacked from the asar.
 build/         App icon, NSIS include (protocol registration), electron-builder resources.
 scripts/       Icon generator, Windows packaging script.
@@ -29,7 +29,8 @@ Modules that make decisions (URL policy, deep links, settings migrations, IPC va
 BrowserWindow (frameless, titleBarStyle: hidden, titleBarOverlay, Mica)
 ├── own webContents ─ app://ui/titlebar.html        role "titlebar"   default session
 ├── WebContentsView ─ https://suno.com              role "suno"       persist:suno session
-└── WebContentsView ─ app://ui/offline.html         role "offline"    (shown only on failure)
+├── WebContentsView ─ app://ui/offline.html         role "offline"    (shown only on failure)
+└── WebContentsView ─ app://ui/onboarding.html      role "onboarding" (first launch, on top of everything)
 
 BrowserWindow ─ app://ui/settings.html               role "settings"   default session
 Auth popups (child BrowserWindows)                   no role           persist:suno session
@@ -38,6 +39,7 @@ Tray, taskbar thumbnail buttons, notifications       main process
 
 - The title bar is the window's own webContents; draggable regions use `-webkit-app-region`. Native caption buttons come from `titleBarOverlay`, so Windows 11 snap layouts work on the maximize button. The suno.com view sits 40 px below the top (full window in F11 / HTML5 fullscreen).
 - Local pages are served from a privileged `app://ui/` scheme registered only on the default session. The suno.com session has no handler for it, so remote content cannot load local UI. Responses carry a strict CSP (`script-src 'self'`, no remote code).
+- The onboarding view covers the whole window below the title bar until the user finishes or skips it. It can only read its state, set the theme and finish (`onboarding:*` channels); the suno.com view keeps loading underneath, so the site is ready when the welcome closes.
 - `src/main/app-controller.ts` composes everything after `app.ready`; `src/main/index.ts` only does pre-ready work (userData path, single-instance lock, hardware acceleration, sandbox, scheme privileges).
 
 ## Security model
@@ -83,6 +85,13 @@ Playback is driven through the page's media session handlers, never by clicking 
 
 `src/main/integrations/discord/` implements the small local IPC protocol (named pipe `\\?\pipe\discord-ipc-N`), handshakes with the application id from `config/app.config.json`, and sends `SET_ACTIVITY` with activity type "Listening": title, `by <artist>`, the cover (Discord accepts https image URLs up to 256 chars, otherwise the `logo` asset), start/end timestamps for the progress bar, and a "Listen on Suno" button. The button links to the song page when the current URL is a song page, otherwise it derives the song id from the cover file name (`image_<uuid>.jpeg`) and falls back to suno.com. Updates are rate limited to Discord's limits and reconnects back off from 15 s to 2 min.
 
+## Theme, onboarding and reset
+
+- **App theme**: the `theme` setting (`system` / `light` / `dark`) drives `nativeTheme.themeSource`, set before any window is created so nothing flashes. Main pushes the resolved theme to every local page (`ui:theme` → `data-theme` on `<html>`) and the CSS uses `light-dark()`; `prefers-color-scheme` alone did not follow `themeSource` reliably on every platform. suno.com sees the same `themeSource` through Chromium.
+- **Onboarding**: shown when `onboardingCompleted` is false, which is the case for new installs only (the v1 → v2 migration marks existing installs as done). Steps: welcome, theme picker (Auto / Light / Dark, applied live), done. Skipping counts as finishing.
+- **Discord Rich Presence** defaults to off and is never switched on by the app; the user enables it in Settings.
+- **Reset app settings** (Settings → Advanced) asks for confirmation, then writes `DEFAULT_SETTINGS` back, which re-applies the theme, hardware acceleration flag, tray, startup and Discord state through the normal `changed` handlers and shows the onboarding again. It never touches the `persist:suno` partition, so the user stays signed in; **Clear session** is the separate, opposite button.
+
 ## Persistence
 
 All under `%APPDATA%/Suno Desktop`:
@@ -93,9 +102,10 @@ All under `%APPDATA%/Suno Desktop`:
 | `window-state.json` | Size, position, maximized; positions on missing monitors are dropped |
 | `Partitions/suno`   | suno.com cookies, storage, cache (the login)                         |
 | `logs/main.log`     | Main process log, rotated at 2 MB                                    |
-| `plugins/`          | Reserved for Suno++ (created at startup, empty)                      |
+| `plugins/`          | Reserved for Suno++ plugins (created at startup, empty)              |
+| `themes/`           | Reserved for Suno++ themes (created at startup, empty)               |
 
-Settings migrations: `MIGRATIONS[n]` upgrades version `n` to `n + 1`; invalid fields fall back to defaults individually, unknown keys are dropped, and files from a newer version are read best-effort.
+Settings migrations: `MIGRATIONS[n]` upgrades version `n` to `n + 1`; invalid fields fall back to defaults individually, unknown keys are dropped, and files from a newer version are read best-effort. Version 2 added `theme` and `onboardingCompleted` (true for upgraded installs, so only fresh installs see the welcome).
 
 ## Updates and packaging
 
@@ -106,4 +116,4 @@ Settings migrations: `MIGRATIONS[n]` upgrades version `n` to `n + 1`; invalid fi
 
 ## Deep links
 
-`suno-desktop://open?path=/song/<id>` (path must be a suno.com path: no `//host`, backslashes or control characters). A second launch forwards its argv to the running instance through the single-instance lock. `suno-desktop://plugin/<action>?…` is parsed and handed to the plugin host stub, which logs it and shows "Plugins aren't available yet".
+`suno-desktop://open?path=/song/<id>` (path must be a suno.com path: no `//host`, backslashes or control characters). A second launch forwards its argv to the running instance through the single-instance lock. `suno-desktop://plugin/<action>?…` and `suno-desktop://theme/<action>?…` are parsed and handed to the plugin and theme host stubs, which log them and show "Plugins aren't available yet" / "Themes aren't available yet". See [Plugin and theme hooks](PLUGIN_HOOKS.md) for what Suno++ will plug into.
