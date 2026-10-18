@@ -1,47 +1,230 @@
+<div align="center">
+
+<img src="build/icon.png" alt="Suno Desktop icon" width="112" height="112">
+
 # Suno Desktop
 
-An unofficial Windows desktop app for [Suno](https://suno.com), built so it feels like a real Windows app: a native title bar with Mica, the Windows media overlay, taskbar controls, a tray icon and Discord Rich Presence.
+### Suno, minus the browser tab.
 
-> **Not affiliated with Suno.** Suno Desktop is an independent open-source project. It is not affiliated with, sponsored by or endorsed by Suno, Inc. "Suno" is a trademark of Suno, Inc. The app shows the regular suno.com website; your account, songs, credits and subscription are handled by Suno as usual.
+An unofficial Windows app that makes [suno.com](https://suno.com) feel like it was built for Windows 11.<br>
+Its own window, real media keys, a tray icon, and music that keeps playing when you close it.
 
-## Features
+[![Latest release](https://img.shields.io/github/v/release/Cat-things/suno-desktop?style=flat-square&label=release&color=7c4dff)](https://github.com/Cat-things/suno-desktop/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Cat-things/suno-desktop/total?style=flat-square&color=b3268f)](https://github.com/Cat-things/suno-desktop/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/Cat-things/suno-desktop/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/Cat-things/suno-desktop/actions/workflows/ci.yml)
+[![Windows 10 and 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4?style=flat-square)](#-install)
+[![License: MIT](https://img.shields.io/github/license/Cat-things/suno-desktop?style=flat-square&color=ff8a3d)](LICENSE)
 
-- **Native window**: frameless Windows 11 title bar with back, forward, reload, home and settings buttons, snap layouts on the maximize button, Mica on Windows 11 22H2 or newer, light and dark mode that follow Windows.
-- **Stays signed in**: suno.com runs in a persistent session, so your login survives restarts.
-- **Sign-in that works**: Suno's login providers (Google, Apple, Discord, Microsoft, Facebook, LINE and phone) open inside the app; other links open in your default browser.
-- **Media controls**: keyboard media keys and the Windows media overlay control Suno's player, plus previous / play-pause / next buttons on the taskbar thumbnail and in the tray menu.
-- **Keeps playing in the background**: closing the window hides it to the tray (can be turned off).
-- **Discord Rich Presence** (optional): song title, artist, cover, elapsed time and a "Listen on Suno" button.
-- **Downloads**: native save dialog or a fixed download folder, taskbar progress and a "Show in folder" notification.
-- **Deep links**: `suno-desktop://open?path=/song/<id>` opens a page in the app.
-- **Offline page** with retry instead of a blank window.
-- **Auto-updates** from GitHub Releases with stable and beta channels.
-- **Settings**: launch on startup, start minimized, close to tray, Discord, download folder, hardware acceleration, zoom, update channel, clear session and log out.
+<a href="https://github.com/Cat-things/suno-desktop/releases/latest">
+  <img src="https://img.shields.io/badge/Download_for_Windows-x64_%26_ARM64-7c4dff?style=for-the-badge" alt="Download for Windows (x64 and ARM64)" height="40">
+</a>
 
-### Keyboard shortcuts
+<sub>Unofficial and open source · not affiliated with, sponsored by or endorsed by Suno, Inc.</sub>
 
-| Shortcut                        | Action                                                         |
-| ------------------------------- | -------------------------------------------------------------- |
-| Ctrl+R / F5                     | Reload                                                         |
-| Ctrl+Shift+R / Ctrl+F5          | Reload without cache                                           |
-| Alt+Left / Alt+Right            | Back / forward (mouse back/forward buttons)                    |
-| Ctrl+Plus / Ctrl+Minus / Ctrl+0 | Zoom in / out / reset (Ctrl+wheel works)                       |
-| Ctrl+,                          | Settings                                                       |
-| F11                             | Full screen                                                    |
-| F12 / Ctrl+Shift+I              | Developer tools (dev builds, or enable in Settings → Advanced) |
+</div>
 
-## Install
+<br>
 
-Download the latest release from the [Releases page](https://github.com/Cat-things/suno-desktop/releases):
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/settings-general-dark.png">
+  <img src="docs/images/settings-general-light.png" alt="The Suno Desktop settings window: Windows 11 style sidebar, cards and toggle switches">
+</picture>
 
-- **`Suno-Desktop-Setup-<version>.exe`**: installer for Windows 10 and 11 (x64 and ARM64 in one file). Updates itself automatically.
-- **`Suno-Desktop-Portable-<version>-x64.exe`** / **`-arm64.exe`**: run without installing. Portable builds do not auto-update.
+## ✨ Why?
 
-Builds are currently **not code-signed**, so Windows SmartScreen will warn you on first launch. Choose **More info → Run anyway**. See [Known issues](#known-issues).
+Suno in a browser tab gets lost between 40 other tabs, stops when you close the wrong window, and your media keys end up pausing a YouTube video instead. Suno Desktop gives Suno its own home on your PC: a real window and taskbar entry, the Windows media controls, a tray icon, and background playback. It's still the regular suno.com, so your account, songs and plan work exactly as they do in your browser.
 
-## Build from source
+## 🎛️ Features
 
-Requirements: Node.js 22.12+ and pnpm 10 (`corepack enable` picks up the pinned version).
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🪟 Feels native</h3>
+      Custom Windows 11 title bar with back, forward, reload and home, snap layouts on the maximize button, Mica on Windows 11 22H2+, and light/dark mode that follows Windows.
+    </td>
+    <td width="50%" valign="top">
+      <h3>🎧 Media keys that just work</h3>
+      Keyboard media keys and the Windows media overlay control Suno's player. Previous / play-pause / next sit on the taskbar thumbnail too.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>🎶 Keeps the music going</h3>
+      Close the window and Suno keeps playing in the tray. Play, pause and skip from the tray menu; quit from there when you're done.
+    </td>
+    <td valign="top">
+      <h3>🎮 Discord Rich Presence</h3>
+      Opt-in: show what you're listening to with cover art, a progress bar and a <b>Listen on Suno</b> button. <i>Coming to official builds soon.</i>
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>🔐 Signed in and locked down</h3>
+      Your login survives restarts. Suno runs sandboxed, gets only the permissions it needs (it asks before using your mic), and links to other sites open in your normal browser.
+    </td>
+    <td valign="top">
+      <h3>⬇️ Downloads that behave</h3>
+      Native save dialog or straight into a folder you pick, progress on the taskbar icon, and a <b>Show in folder</b> notification when it's done.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>🔄 Updates itself</h3>
+      New versions download in the background and install when you quit. Stable and beta channels.
+    </td>
+    <td valign="top">
+      <h3>📴 No white screen of nothing</h3>
+      Lost your connection? You get a proper offline page that retries on its own when you're back online.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>🔗 Deep links</h3>
+      <code>suno-desktop://open?path=/song/…</code> opens a song straight in the app.
+    </td>
+    <td valign="top">
+      <h3>🧩 Plugin-ready</h3>
+      Built with clean hooks for <b>Suno++</b>, the upcoming plugin system for Suno on the web and on desktop.
+    </td>
+  </tr>
+</table>
+
+## 📸 A closer look
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/titlebar-strip-dark.png">
+  <img src="docs/images/titlebar-strip-light.png" alt="The Suno Desktop title bar: app icon, back, forward, reload, home, page title, settings and Windows caption buttons">
+</picture>
+<p align="center"><sub>A title bar that belongs on Windows 11: navigation, settings, and real caption buttons with snap layouts</sub></p>
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/images/main-offline-dark.png">
+        <img src="docs/images/main-offline-light.png" alt="The main window showing the offline page with a Try again button">
+      </picture>
+      <p align="center"><sub>Offline? A real page with retry, not a blank window</sub></p>
+    </td>
+    <td width="50%" valign="top">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/images/settings-about-dark.png">
+        <img src="docs/images/settings-about-light.png" alt="The About page in settings">
+      </picture>
+      <p align="center"><sub>Settings → About</sub></p>
+    </td>
+  </tr>
+</table>
+
+## 🚀 Install
+
+1. Download **`Suno-Desktop-Setup-<version>.exe`** from the [latest release](https://github.com/Cat-things/suno-desktop/releases/latest). One installer covers both x64 and ARM64 PCs.
+2. Run it and pick where to install.
+3. Sign in to Suno like you normally would. That's it: you stay signed in, and the app keeps itself up to date.
+
+> [!WARNING]
+> Builds aren't code-signed yet, so Windows SmartScreen will say _"Windows protected your PC"_. Click **More info → Run anyway**. Signing is on the [roadmap](#-roadmap).
+
+> [!TIP]
+> Rather not install anything? Grab **`Suno-Desktop-Portable-<version>-x64.exe`** (or **`-arm64.exe`** for ARM PCs) and just run it. Portable builds don't auto-update.
+
+## 🔑 Signing in
+
+Every login option on suno.com opens inside the app, in its own window when the provider wants a popup:
+
+| Provider    | In the app                                                        |
+| ----------- | ----------------------------------------------------------------- |
+| Google      | ⚠️ Opens, but Google sometimes refuses sign-ins from desktop apps |
+| Apple       | ✅                                                                |
+| Discord     | ✅                                                                |
+| Microsoft   | ✅                                                                |
+| Facebook    | ✅                                                                |
+| LINE        | ✅                                                                |
+| Phone (SMS) | ✅                                                                |
+
+If Google shows _"This browser or app may not be secure"_, use another option. If your Suno account only has Google login, add another sign-in method to it on suno.com in your normal browser first.
+
+## ⌨️ Keyboard shortcuts
+
+| Keys                                                                | Does                                               |
+| ------------------------------------------------------------------- | -------------------------------------------------- |
+| <kbd>Ctrl</kbd> + <kbd>R</kbd> or <kbd>F5</kbd>                     | Reload                                             |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd>                   | Reload without cache                               |
+| <kbd>Alt</kbd> + <kbd>←</kbd> / <kbd>→</kbd>                        | Back / forward (mouse side buttons work too)       |
+| <kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>-</kbd> / <kbd>0</kbd>        | Zoom in / out / reset (or <kbd>Ctrl</kbd> + wheel) |
+| <kbd>Ctrl</kbd> + <kbd>,</kbd>                                      | Settings                                           |
+| <kbd>F11</kbd>                                                      | Full screen                                        |
+| <kbd>F12</kbd> or <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>I</kbd> | Developer tools (turn on in Settings → Advanced)   |
+
+## ❓ FAQ
+
+<details>
+<summary><b>Is this made by Suno?</b></summary>
+<br>
+No. Suno Desktop is an independent, open-source project. It isn't affiliated with, sponsored by or endorsed by Suno, Inc. It shows the regular suno.com website in a desktop window.
+</details>
+
+<details>
+<summary><b>Can the app see my password?</b></summary>
+<br>
+Signing in happens on Suno's and your provider's own pages, loaded as they are. The app injects nothing into those pages and never reads or stores passwords. Your session cookies stay on your PC in <code>%APPDATA%\Suno Desktop</code>.
+</details>
+
+<details>
+<summary><b>Does it unlock free credits or skip limits?</b></summary>
+<br>
+Nope. It's the same website, so plans, credits and limits work exactly like in your browser.
+</details>
+
+<details>
+<summary><b>Why is the installer around 200 MB?</b></summary>
+<br>
+It carries complete x64 and ARM64 builds (each with its own Chromium) so that one installer and one update feed work on every PC. Only the build your PC needs gets installed. The portable exes are per-architecture and about half the size.
+</details>
+
+<details>
+<summary><b>How do I sign out or start fresh?</b></summary>
+<br>
+Settings → Advanced → <b>Clear session and log out</b>. To wipe everything, uninstall the app and delete <code>%APPDATA%\Suno Desktop</code>.
+</details>
+
+<details>
+<summary><b>Something's broken. Where are the logs?</b></summary>
+<br>
+<code>%APPDATA%\Suno Desktop\logs\main.log</code>. Attach it to an <a href="https://github.com/Cat-things/suno-desktop/issues">issue</a> along with your Windows version.
+</details>
+
+<details>
+<summary><b>Mac or Linux?</b></summary>
+<br>
+Windows only for now. It may run from source elsewhere, but it isn't built or tested for other platforms.
+</details>
+
+## 🐛 Known issues
+
+- **Google sign-in can be blocked** by Google (see [Signing in](#-signing-in)).
+- **SmartScreen warns** on first launch until releases are signed.
+- **Next / previous** buttons light up only when suno.com offers next and previous track controls to the browser.
+- **The "Listen on Suno" button** in Discord shows for your friends, not for you. That's how Discord displays buttons.
+- **Mica** needs Windows 11 22H2 or newer. Older versions get a solid title bar.
+
+## 🧭 Roadmap
+
+- [x] Native window, media keys, tray, downloads, offline page
+- [x] Auto-updates with stable and beta channels
+- [x] Automatic releases
+- [ ] Discord Rich Presence switched on in official builds
+- [ ] Code signing (no more SmartScreen warning)
+- [ ] A proper app icon
+- [ ] **Suno++**: plugins and a plugin marketplace for Suno, starting with smarter style recommendations
+
+## 🛠️ Build it yourself
+
+<details>
+<summary><b>Run from source</b></summary>
+<br>
+
+You need Node.js 22.12+ and pnpm 10 (`corepack enable` picks up the pinned version).
 
 ```sh
 pnpm install
@@ -56,33 +239,41 @@ Package for Windows (run on Windows):
 
 ```sh
 pnpm dist:win         # NSIS installer (x64 + arm64) and portable exes in dist/
-pnpm dist:dir         # unpacked app only, quickest way to try a packaged build
+pnpm dist:dir         # unpacked app only, the quickest way to try a packaged build
 ```
 
-GitHub Actions builds Windows packages for you:
+</details>
 
-- **Test builds**: every push to any branch runs [Build Windows](.github/workflows/build-windows.yml), which builds the unsigned installer and both portable exes and attaches them to the run as artifacts (kept for 14 days). You can also start it by hand from the Actions tab.
-- **Releases**: [Release](.github/workflows/release.yml) publishes a GitHub release (installer, portable exes, `latest.yml` for auto-update) **automatically after every 3 commits on `main`**. It bumps the patch version (0.1.0 → 0.1.1 → …), tags the built commit and writes release notes from the commit list. You can also release right away from Actions → Release → **Run workflow**, or by pushing a `vX.Y.Z` tag (prereleases like `v0.2.0-beta.1` go to the beta channel). To start a new minor or major line, set the new version in `package.json`; the next release uses it.
+<details>
+<summary><b>How builds and releases work</b></summary>
+<br>
 
-### Configuration
+- **Test builds**: every push to any branch runs [Build Windows](.github/workflows/build-windows.yml), which builds the unsigned installer and both portable exes and attaches them to the run as artifacts for 14 days. You can also start it by hand from the Actions tab.
+- **Releases**: [Release](.github/workflows/release.yml) publishes a GitHub release automatically after every **3 commits on `main`**. It bumps the patch version (0.1.0 → 0.1.1 → …), tags the commit it built, uploads the installer, portable exes and `latest.yml` (for auto-update), and writes release notes from the commit list.
+- **Release now**: Actions → Release → **Run workflow**, or push a `vX.Y.Z` tag. Prereleases like `v0.2.0-beta.1` go to the beta channel.
+- **New minor or major version**: set it in `package.json`; the next release uses it.
 
-- **Discord Rich Presence** needs a Discord application id. Create an application at the [Discord Developer Portal](https://discord.com/developers/applications), name it as you want it to appear ("Listening to …"), and put its Application ID into [`config/app.config.json`](config/app.config.json). Upload an art asset named `logo` for songs without a cover. For local testing you can set `SUNO_DESKTOP_DISCORD_CLIENT_ID` instead. Without an id the setting is disabled.
-- **Icons** are placeholders. Replace `build/icon.svg` and `resources/tray.svg` and run `pnpm icons`.
+</details>
 
-## Known issues
+<details>
+<summary><b>Configuration</b></summary>
+<br>
 
-- **Google sign-in may be blocked.** Google refuses sign-in from browsers it considers embedded. The app sends a plain Chrome user agent, which usually works, but Google also uses other signals and can still show "This browser or app may not be secure". If that happens, sign in with another option (Apple, Discord, Microsoft, Facebook, LINE or phone). If your Suno account only has Google login, you may be able to add another sign-in method to the account on suno.com in a regular browser first.
-- **SmartScreen warning** on unsigned builds (see Install). It goes away once releases are signed with a reputable certificate.
-- **Next/previous controls depend on Suno.** They are enabled only when suno.com registers next/previous track handlers with the browser's media session.
-- **Discord shows the "Listen on Suno" button to others, not to you.** That is how Discord displays activity buttons.
-- **Mica** needs Windows 11 22H2 or newer; older versions get a solid title bar.
+- **Discord Rich Presence** needs a Discord application ID. Create an application in the [Discord Developer Portal](https://discord.com/developers/applications) (its name is what shows after "Listening to"), put the Application ID in [`config/app.config.json`](config/app.config.json), and upload an art asset named `logo` for songs without a cover. For local testing you can set `SUNO_DESKTOP_DISCORD_CLIENT_ID` instead.
+- **Icons** are placeholders. Replace `build/icon.svg` and `resources/tray.svg`, then run `pnpm icons`.
 
-## Documentation
+</details>
 
-- [Architecture](docs/ARCHITECTURE.md): processes, windows, security model, IPC, media flow.
-- [Plugin hooks](docs/PLUGIN_HOOKS.md): seams for the upcoming Suno++ plugin system.
-- [Testing](docs/TESTING.md): automated tests and the manual Windows checklist.
+## 📚 Docs
 
-## License
+- [Architecture](docs/ARCHITECTURE.md): windows, the security model, IPC and how media controls flow
+- [Plugin hooks](docs/PLUGIN_HOOKS.md): the seams Suno++ plugs into
+- [Testing](docs/TESTING.md): what CI checks and the manual Windows checklist
 
-[MIT](LICENSE). Suno's name and website belong to Suno, Inc.; this repository ships none of Suno's logos or assets.
+## 🤝 Contributing
+
+Issues and pull requests are welcome. Before you push, run `pnpm lint && pnpm typecheck && pnpm test`; CI runs those plus end-to-end tests on Linux and Windows.
+
+## ⚖️ License
+
+[MIT](LICENSE). "Suno" is a trademark of Suno, Inc. This project ships none of Suno's logos or assets.
