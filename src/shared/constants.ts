@@ -3,6 +3,8 @@
 export const APP_NAME = 'Suno Desktop'
 export const APP_ID = 'com.catthings.sunodesktop'
 export const REPO_URL = 'https://github.com/Cat-things/suno-desktop'
+/** Suno++: community plugins and themes (src/main/sunoplusplus/). */
+export const SPP_REPO_URL = 'https://github.com/Cat-things/sunoplusplus'
 
 /** Registered with Windows so links like `suno-desktop://open?path=/song/xyz` reach the app. */
 export const DEEP_LINK_SCHEME = 'suno-desktop'

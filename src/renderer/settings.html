@@ -21,9 +21,8 @@
         <button role="tab" data-tab="downloads">Downloads</button>
         <button role="tab" data-tab="updates">Updates</button>
         <button role="tab" data-tab="advanced">Advanced</button>
-        <!-- Slots for Suno++: shown only when the plugin / theme hosts report they are available. -->
-        <button role="tab" data-tab="plugins" hidden>Plugins</button>
-        <button role="tab" data-tab="themes" hidden>Themes</button>
+        <button role="tab" data-tab="plugins">Plugins</button>
+        <button role="tab" data-tab="themes">Themes</button>
         <button role="tab" data-tab="about">About</button>
       </nav>
 
@@ -235,20 +234,68 @@
 
         <section role="tabpanel" data-panel="plugins" hidden>
           <h1>Plugins</h1>
+          <div class="card">
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Suno++</div>
+                <div class="row-desc">
+                  Community plugins and themes for Suno, downloaded from GitHub and kept up to date.
+                  Each one stays off until you turn it on.
+                </div>
+              </div>
+              <label class="toggle"
+                ><span class="toggle-state"></span
+                ><input type="checkbox" data-setting="sunoPlusPlusEnabled" /><span
+                  class="track"
+                ></span
+              ></label>
+            </div>
+            <div class="row" data-spp-when-on>
+              <div class="row-text">
+                <div class="row-title" id="spp-version">Suno++</div>
+                <div class="row-desc" id="spp-status" role="status"></div>
+              </div>
+              <button class="button" id="spp-check">Check for updates</button>
+            </div>
+            <div class="row" data-spp-when-on>
+              <div class="row-text">
+                <div class="row-title">Update Suno++ automatically</div>
+                <div class="row-desc">
+                  New and updated plugins and themes arrive without updating Suno Desktop.
+                </div>
+              </div>
+              <label class="toggle"
+                ><span class="toggle-state"></span
+                ><input type="checkbox" data-setting="sunoPlusPlusAutoUpdate" /><span
+                  class="track"
+                ></span
+              ></label>
+            </div>
+          </div>
+          <div id="spp-plugins" data-spp-when-on></div>
           <div class="card info">
-            <p id="plugins-empty">No plugins installed.</p>
-            <ul class="plugin-list" id="plugin-list"></ul>
-            <p class="row-desc path" id="plugins-dir"></p>
+            <p>
+              Plugins and themes are made by the community and reviewed on GitHub before they ship.
+              Suno++ is unofficial and not affiliated with Suno, Inc.
+            </p>
+            <div class="links">
+              <button class="button" data-spp-link="">Suno++ on GitHub</button>
+              <button class="button" data-spp-link="/blob/main/CONTRIBUTING.md">
+                Make your own
+              </button>
+            </div>
           </div>
         </section>
 
         <section role="tabpanel" data-panel="themes" hidden>
           <h1>Themes</h1>
-          <div class="card info">
-            <p id="themes-empty">No themes installed.</p>
-            <ul class="plugin-list" id="theme-list"></ul>
-            <p class="row-desc path" id="themes-dir"></p>
+          <div class="card info" data-spp-when-off>
+            <p>Turn on Suno++ in Plugins to use community themes for suno.com.</p>
           </div>
+          <div id="spp-themes" data-spp-when-on></div>
+          <p class="row-desc spp-hint">
+            Themes change how suno.com looks. The app's own Light, Dark or Auto look is in General.
+          </p>
         </section>
 
         <section role="tabpanel" data-panel="about" hidden>

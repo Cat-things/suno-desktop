@@ -52,11 +52,11 @@ const api: SunoDesktopUiApi = {
     getState: () => invoke(IPC.updateGetState),
     onState: (listener) => subscribe(IPC.updateState, listener)
   },
-  plugins: {
-    list: () => invoke(IPC.pluginsList)
-  },
-  themes: {
-    list: () => invoke(IPC.themesList)
+  sunoPlusPlus: {
+    getInfo: () => invoke(IPC.sunoPlusPlusGetInfo),
+    check: () => invoke(IPC.sunoPlusPlusCheck),
+    act: (action) => invoke(IPC.sunoPlusPlusAction, action),
+    onInfo: (listener) => subscribe(IPC.sunoPlusPlusInfo, listener)
   },
   onboarding: {
     getState: () => invoke(IPC.onboardingGetState),

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { IPC } from '../src/shared/ipc-channels'
 import {
   checkIpcMessage,
+  externalLinkSchema,
   isTrustedLocalUiUrl,
   mediaSnapshotSchema,
   type SenderInfo
@@ -126,6 +127,49 @@ describe('onboarding and reset channels', () => {
     expect(checkIpcMessage(IPC.settingsResetApp, settings, undefined).ok).toBe(true)
     expect(checkIpcMessage(IPC.settingsResetApp, titlebar, undefined).ok).toBe(false)
     expect(checkIpcMessage(IPC.settingsResetApp, suno, undefined).ok).toBe(false)
+  })
+})
+
+describe('Suno++ channels', () => {
+  it('lets only the settings window read, check and change Suno++', () => {
+    const action = { type: 'setPluginEnabled', id: 'now-playing-title', enabled: true }
+    expect(checkIpcMessage(IPC.sunoPlusPlusAction, settings, action)).toEqual({
+      ok: true,
+      payload: action
+    })
+    expect(checkIpcMessage(IPC.sunoPlusPlusGetInfo, settings, undefined).ok).toBe(true)
+    expect(checkIpcMessage(IPC.sunoPlusPlusCheck, settings, undefined).ok).toBe(true)
+    for (const sender of [titlebar, suno]) {
+      expect(checkIpcMessage(IPC.sunoPlusPlusAction, sender, action).ok).toBe(false)
+      expect(checkIpcMessage(IPC.sunoPlusPlusCheck, sender, undefined).ok).toBe(false)
+    }
+  })
+
+  it('rejects malformed actions', () => {
+    for (const bad of [
+      { type: 'setPluginEnabled', id: '../x', enabled: true },
+      { type: 'setThemeVariable', id: 'neon', key: 'accent', value: 'red; }' },
+      { type: 'eval', js: 'alert(1)' }
+    ]) {
+      expect(checkIpcMessage(IPC.sunoPlusPlusAction, settings, bad).ok).toBe(false)
+    }
+  })
+
+  it('lets the settings window link to the Suno Desktop and Suno++ repos only', () => {
+    expect(externalLinkSchema.safeParse('https://github.com/Cat-things/sunoplusplus').success).toBe(
+      true
+    )
+    expect(
+      externalLinkSchema.safeParse(
+        'https://github.com/Cat-things/sunoplusplus/blob/main/CONTRIBUTING.md'
+      ).success
+    ).toBe(true)
+    expect(
+      externalLinkSchema.safeParse('https://github.com/Cat-things/sunoplusplus-evil').success
+    ).toBe(false)
+    expect(
+      externalLinkSchema.safeParse('https://example.com/Cat-things/sunoplusplus').success
+    ).toBe(false)
   })
 })
 

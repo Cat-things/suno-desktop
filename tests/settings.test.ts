@@ -128,6 +128,51 @@ describe('defaults and upgrades', () => {
   })
 })
 
+describe('Suno++ settings', () => {
+  it('starts off, with automatic updates on and nothing chosen', () => {
+    expect(DEFAULT_SETTINGS).toMatchObject({
+      sunoPlusPlusEnabled: false,
+      sunoPlusPlusAutoUpdate: true,
+      sunoPlusPlus: { enabled: {}, settings: {}, theme: null, themeVariables: {} }
+    })
+  })
+
+  it('upgrades v2 files with Suno++ off and keeps everything else', () => {
+    const v2 = { ...DEFAULT_SETTINGS, version: 2, closeToTray: false, onboardingCompleted: true }
+    const {
+      sunoPlusPlusEnabled: _a,
+      sunoPlusPlusAutoUpdate: _b,
+      sunoPlusPlus: _c,
+      ...withoutSpp
+    } = v2
+    const { settings, warnings } = migrateSettings(withoutSpp)
+    expect(settings).toMatchObject({
+      version: 3,
+      closeToTray: false,
+      onboardingCompleted: true,
+      sunoPlusPlusEnabled: false
+    })
+    expect(warnings).toEqual([])
+  })
+
+  it('falls back to an empty choice when the stored Suno++ state is broken', () => {
+    const { settings, warnings } = migrateSettings({
+      ...DEFAULT_SETTINGS,
+      sunoPlusPlus: { enabled: { 'Not An Id': 'yes' }, settings: {}, theme: 7, themeVariables: {} }
+    })
+    expect(settings.sunoPlusPlus).toEqual(DEFAULT_SETTINGS.sunoPlusPlus)
+    expect(warnings).toEqual(['invalid value for "sunoPlusPlus"; using default'])
+  })
+
+  it('lets the settings window toggle Suno++ but not write its state directly', () => {
+    expect(settingsPatchSchema.safeParse({ sunoPlusPlusEnabled: true }).success).toBe(true)
+    expect(settingsPatchSchema.safeParse({ sunoPlusPlusAutoUpdate: false }).success).toBe(true)
+    expect(
+      settingsPatchSchema.safeParse({ sunoPlusPlus: DEFAULT_SETTINGS.sunoPlusPlus }).success
+    ).toBe(false)
+  })
+})
+
 describe('settings patches', () => {
   it('accepts user-editable fields', () => {
     const patch = settingsPatchSchema.parse({ closeToTray: false, updateChannel: 'beta' })

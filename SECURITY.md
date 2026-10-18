@@ -42,12 +42,13 @@ This is a small volunteer project, so timelines are goals rather than guarantees
 - Bypassing the navigation allowlist, the permission policy or the IPC sender/payload checks
 - `window.sunoDesktop` or the plugin bridge exposing something privileged
 - Malicious `suno-desktop://` deep links doing more than opening a suno.com page
-- Tampering with downloads or auto-updates
+- Tampering with downloads or auto-updates, including the Suno++ updater (getting the app to run a Suno++ bundle that doesn't match its release's `desktop.json`, or to fetch it from anywhere else)
 - Problems in our build and release pipeline (GitHub Actions, packaging)
 
 **Out of scope**:
 
 - Bugs in suno.com itself, your Suno account or billing. Report those to Suno at [help.suno.com](https://help.suno.com).
+- Problems inside a Suno++ plugin or theme. Report those privately to [Suno++](https://github.com/Cat-things/sunoplusplus/security/advisories/new).
 - Bugs in Electron or Chromium that this app doesn't make worse. Please report them upstream (Electron's [security policy](https://github.com/electron/electron/security/policy)). If our configuration makes an upstream bug exploitable, that _is_ in scope.
 - Attacks that need admin rights, physical access, or malware already running as your user
 - The SmartScreen warning on unsigned builds (code signing is on the roadmap)

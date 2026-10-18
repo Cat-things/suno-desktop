@@ -6,6 +6,7 @@
 import type { MediaCommand, MediaSnapshot } from './media'
 import type { BridgeEventName, BridgeEventMap } from './bridge'
 import type { Settings, SettingsPatch, ThemeSource } from './settings'
+import type { SppAction, SppInfo } from './sunoplusplus'
 
 export const IPC = {
   // Local UI -> main (invoke)
@@ -27,8 +28,9 @@ export const IPC = {
   updateCheck: 'update:check',
   updateInstall: 'update:install',
   updateGetState: 'update:get-state',
-  pluginsList: 'plugins:list',
-  themesList: 'themes:list',
+  sunoPlusPlusGetInfo: 'sunoplusplus:get-info',
+  sunoPlusPlusCheck: 'sunoplusplus:check',
+  sunoPlusPlusAction: 'sunoplusplus:action',
   offlineGetInfo: 'offline:get-info',
   onboardingGetState: 'onboarding:get-state',
   onboardingSetTheme: 'onboarding:set-theme',
@@ -40,6 +42,7 @@ export const IPC = {
   updateState: 'update:state',
   offlineInfo: 'offline:info',
   themeChanged: 'ui:theme',
+  sunoPlusPlusInfo: 'sunoplusplus:info',
 
   // suno.com preload -> main (send)
   mediaUpdate: 'media:update',
@@ -68,11 +71,7 @@ export interface AppInfo {
   readonly arch: string
   readonly isPackaged: boolean
   readonly isPortable: boolean
-  readonly pluginsDir: string
-  readonly themesDir: string
   readonly discordConfigured: boolean
-  readonly pluginsAvailable: boolean
-  readonly themesAvailable: boolean
   /** Hardware acceleration as applied at launch; differs from settings until a restart. */
   readonly hardwareAccelerationAtLaunch: boolean
 }
@@ -100,22 +99,6 @@ export interface OfflineInfo {
   readonly url: string
   readonly errorCode: number
   readonly errorDescription: string
-}
-
-export interface PluginSummary {
-  readonly id: string
-  readonly name: string
-  readonly version: string
-  readonly enabled: boolean
-}
-
-/** A Suno++ theme as listed in the (hidden) Themes tab. The format is defined by Suno++. */
-export interface ThemeSummary {
-  readonly id: string
-  readonly name: string
-  readonly version: string
-  readonly author: string
-  readonly active: boolean
 }
 
 export interface OnboardingState {
@@ -160,11 +143,13 @@ export interface SunoDesktopUiApi {
     getState(): Promise<UpdateState>
     onState(listener: (state: UpdateState) => void): () => void
   }
-  readonly plugins: {
-    list(): Promise<readonly PluginSummary[]>
-  }
-  readonly themes: {
-    list(): Promise<readonly ThemeSummary[]>
+  /** Suno++ community plugins and themes (src/main/sunoplusplus/). */
+  readonly sunoPlusPlus: {
+    getInfo(): Promise<SppInfo>
+    /** Checks for a newer Suno++ now (downloads it the first time). */
+    check(): Promise<SppInfo>
+    act(action: SppAction): Promise<SppInfo>
+    onInfo(listener: (info: SppInfo) => void): () => void
   }
   readonly onboarding: {
     getState(): Promise<OnboardingState>
@@ -177,4 +162,4 @@ export interface SunoDesktopUiApi {
   }
 }
 
-export type { MediaCommand, MediaSnapshot }
+export type { MediaCommand, MediaSnapshot, SppAction, SppInfo }

@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { APP_HOST, APP_SCHEME, REPO_URL } from './constants'
 import { IPC, type IpcChannel } from './ipc-channels'
 import { settingsPatchSchema, themeSourceSchema } from './settings'
+import { SPP_REPO_URL, sppActionSchema } from './sunoplusplus'
 import { isSunoAppUrl } from './url-policy'
 
 /**
@@ -44,23 +45,24 @@ export const mediaSnapshotSchema = z.strictObject({
 
 export const mediaCommandSchema = z.enum(['play', 'pause', 'toggle', 'next', 'previous'])
 
-const repoUrl = new URL(REPO_URL)
+const linkableRepos = [new URL(REPO_URL), new URL(SPP_REPO_URL)]
 
-/** The settings window may only open links into this project's GitHub repo. */
+/** The settings window may only open links into this project's or Suno++'s GitHub repo. */
 export const externalLinkSchema = z
   .string()
   .max(2048)
   .refine((raw) => {
     try {
       const url = new URL(raw)
-      return (
-        url.origin === repoUrl.origin &&
-        (url.pathname === repoUrl.pathname || url.pathname.startsWith(`${repoUrl.pathname}/`))
+      return linkableRepos.some(
+        (repo) =>
+          url.origin === repo.origin &&
+          (url.pathname === repo.pathname || url.pathname.startsWith(`${repo.pathname}/`))
       )
     } catch {
       return false
     }
-  }, 'link must point to the Suno Desktop repository')
+  }, 'link must point to the Suno Desktop or Suno++ repository')
 
 interface Contract {
   readonly roles: readonly SenderRole[]
@@ -89,8 +91,9 @@ export const IPC_CONTRACTS = {
   [IPC.updateCheck]: { roles: ['settings'], payload: noPayload },
   [IPC.updateInstall]: { roles: ['settings'], payload: noPayload },
   [IPC.updateGetState]: { roles: ['settings'], payload: noPayload },
-  [IPC.pluginsList]: { roles: ['settings'], payload: noPayload },
-  [IPC.themesList]: { roles: ['settings'], payload: noPayload },
+  [IPC.sunoPlusPlusGetInfo]: { roles: ['settings'], payload: noPayload },
+  [IPC.sunoPlusPlusCheck]: { roles: ['settings'], payload: noPayload },
+  [IPC.sunoPlusPlusAction]: { roles: ['settings'], payload: sppActionSchema },
   [IPC.offlineGetInfo]: { roles: ['offline'], payload: noPayload },
   [IPC.onboardingGetState]: { roles: ['onboarding'], payload: noPayload },
   [IPC.onboardingSetTheme]: { roles: ['onboarding'], payload: themeSourceSchema },

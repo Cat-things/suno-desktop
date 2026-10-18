@@ -3,9 +3,8 @@ import type { Settings, ThemeSource } from '../../shared/settings'
 import type { Logger } from '../logger'
 import type { MediaController } from '../media/media-controller'
 import { openExternalSafely } from '../navigation'
-import type { PluginHost } from '../plugins'
-import type { ThemeHost } from '../themes'
 import type { SettingsStore } from '../settings-store'
+import type { SunoPlusPlusManager } from '../sunoplusplus/manager'
 import type { Updater } from '../updater'
 import type { MainWindow } from '../windows/main-window'
 import type { IpcRouter } from './router'
@@ -16,8 +15,7 @@ export interface IpcContext {
   readonly settings: SettingsStore
   readonly media: MediaController
   readonly updater: Updater
-  readonly pluginHost: PluginHost
-  readonly themeHost: ThemeHost
+  readonly sunoPlusPlus: SunoPlusPlusManager
   readonly openSettings: () => void
   readonly appInfo: () => AppInfo
   readonly chooseDownloadFolder: () => Promise<Settings>
@@ -75,8 +73,12 @@ export function registerIpcHandlers(router: IpcRouter, ctx: IpcContext): void {
   })
   router.handle(IPC.updateGetState, () => ctx.updater.current)
 
-  router.handle(IPC.pluginsList, () => ctx.pluginHost.list())
-  router.handle(IPC.themesList, () => ctx.themeHost.list())
+  router.handle(IPC.sunoPlusPlusGetInfo, () => ctx.sunoPlusPlus.info())
+  router.handle(IPC.sunoPlusPlusCheck, async () => {
+    await ctx.sunoPlusPlus.check()
+    return ctx.sunoPlusPlus.info()
+  })
+  router.handle(IPC.sunoPlusPlusAction, (action) => ctx.sunoPlusPlus.act(action))
   router.handle(IPC.offlineGetInfo, () => mainWindow.offlineInfo())
 
   router.handle(IPC.onboardingGetState, () => ctx.onboardingState())

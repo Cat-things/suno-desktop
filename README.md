@@ -84,7 +84,7 @@ Suno in a browser tab gets lost between 40 other tabs, stops when you close the 
     </td>
     <td valign="top">
       <h3>🧩 Plugins & themes, by the community</h3>
-      Built with clean hooks for <b>Suno++</b>, the upcoming home for community-made plugins and themes for Suno, on the web and on desktop.
+      Turn on <b><a href="https://github.com/Cat-things/sunoplusplus">Suno++</a></b> in Settings → Plugins for community-made plugins and themes. They update themselves, and each one stays off until you turn it on.
     </td>
   </tr>
 </table>
@@ -112,6 +112,16 @@ Suno in a browser tab gets lost between 40 other tabs, stops when you close the 
         <img src="docs/images/settings-about-light.png" alt="The About page in settings">
       </picture>
       <p align="center"><sub>Settings → About</sub></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/settings-plugins.png" alt="Settings, Plugins tab: Suno++ turned on and up to date, with the now-playing plugin and its settings">
+      <p align="center"><sub>Suno++ plugins, kept up to date for you</sub></p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/settings-themes.png" alt="Settings, Themes tab: the Neon accents theme picked, with color pickers">
+      <p align="center"><sub>Community themes for suno.com, with your own colors</sub></p>
     </td>
   </tr>
 </table>
@@ -197,7 +207,7 @@ Settings → Advanced has two buttons. <b>Reset app settings</b> puts every app 
 <details>
 <summary><b>Can I make my own plugins or themes?</b></summary>
 <br>
-Soon. <b>Suno++</b>, the upcoming companion project, will let anyone build and share plugins and themes for Suno, with a marketplace to find them, working both on suno.com and in Suno Desktop. The app already has the hooks for it (see <a href="docs/PLUGIN_HOOKS.md">plugin and theme hooks</a>). Until then, share ideas in <a href="https://github.com/Cat-things/suno-desktop/discussions">Discussions</a>.
+Yes! Plugins and themes live in <b><a href="https://github.com/Cat-things/sunoplusplus">Suno++</a></b>, which anyone can contribute to (<a href="https://github.com/Cat-things/sunoplusplus/blob/main/CONTRIBUTING.md">how</a>). Once yours is merged, it reaches Suno Desktop by itself in the next Suno++ release, no app update needed, and it works in the Suno++ browser extension too. Not a coder? Share ideas in <a href="https://github.com/Cat-things/suno-desktop/discussions">Discussions</a>. How the app loads Suno++: <a href="docs/PLUGIN_HOOKS.md">docs/PLUGIN_HOOKS.md</a>.
 </details>
 
 <details>
@@ -223,7 +233,8 @@ Windows only for now. It may run from source elsewhere, but it isn't built or te
 - [x] First-launch welcome with Light, Dark and Auto themes
 - [ ] Code signing (no more SmartScreen warning)
 - [ ] A proper app icon
-- [ ] **Suno++**: community-made **plugins and themes** for Suno with a marketplace, starting with smarter style recommendations
+- [x] **Suno++**: community-made **plugins and themes**, built in and updating themselves
+- [ ] A Suno++ marketplace page and smarter style recommendations for the Create page
 
 ## 🛠️ Build it yourself
 
@@ -274,7 +285,7 @@ pnpm dist:dir         # unpacked app only, the quickest way to try a packaged bu
 ## 📚 Docs
 
 - [Architecture](docs/ARCHITECTURE.md): windows, the security model, IPC and how media controls flow
-- [Plugin and theme hooks](docs/PLUGIN_HOOKS.md): the seams Suno++ plugs into
+- [Suno++ and the plugin hooks](docs/PLUGIN_HOOKS.md): how the app downloads, updates and runs Suno++
 - [Testing](docs/TESTING.md): what CI checks and the manual Windows checklist
 
 ## 🤝 Community

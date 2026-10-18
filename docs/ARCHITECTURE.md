@@ -4,7 +4,7 @@ Suno Desktop wraps the suno.com website in a hardened Electron shell. It never c
 
 ## Why Electron
 
-Electron ships full Chromium, so Chrome-extension style content scripts and `session.extensions.loadExtension` work. That keeps future Suno++ plugins portable between the browser and the desktop app, which a WebView2-based Tauri app could not guarantee. Chromium also brings native media-session integration (Windows media overlay, hardware media keys) for free.
+Electron ships full Chromium, so Chrome-extension style content scripts and `session.extensions.loadExtension` work. That keeps Suno++ plugins portable between the browser and the desktop app, which a WebView2-based Tauri app could not guarantee. Chromium also brings native media-session integration (Windows media overlay, hardware media keys) for free.
 
 ## Layout
 
@@ -102,10 +102,9 @@ All under `%APPDATA%/Suno Desktop`:
 | `window-state.json` | Size, position, maximized; positions on missing monitors are dropped |
 | `Partitions/suno`   | suno.com cookies, storage, cache (the login)                         |
 | `logs/main.log`     | Main process log, rotated at 2 MB                                    |
-| `plugins/`          | Reserved for Suno++ plugins (created at startup, empty)              |
-| `themes/`           | Reserved for Suno++ themes (created at startup, empty)               |
+| `sunoplusplus/`     | The downloaded Suno++ release (`current/`), verified on every start  |
 
-Settings migrations: `MIGRATIONS[n]` upgrades version `n` to `n + 1`; invalid fields fall back to defaults individually, unknown keys are dropped, and files from a newer version are read best-effort. Version 2 added `theme` and `onboardingCompleted` (true for upgraded installs, so only fresh installs see the welcome).
+Settings migrations: `MIGRATIONS[n]` upgrades version `n` to `n + 1`; invalid fields fall back to defaults individually, unknown keys are dropped, and files from a newer version are read best-effort. Version 2 added `theme` and `onboardingCompleted` (true for upgraded installs, so only fresh installs see the welcome). Version 3 added Suno++ (`sunoPlusPlusEnabled`, off; `sunoPlusPlusAutoUpdate`, on; `sunoPlusPlus`, the user's plugin and theme choices).
 
 ## Updates and packaging
 
@@ -116,4 +115,8 @@ Settings migrations: `MIGRATIONS[n]` upgrades version `n` to `n + 1`; invalid fi
 
 ## Deep links
 
-`suno-desktop://open?path=/song/<id>` (path must be a suno.com path: no `//host`, backslashes or control characters). A second launch forwards its argv to the running instance through the single-instance lock. `suno-desktop://plugin/<action>?…` and `suno-desktop://theme/<action>?…` are parsed and handed to the plugin and theme host stubs, which log them and show "Plugins aren't available yet" / "Themes aren't available yet". See [Plugin and theme hooks](PLUGIN_HOOKS.md) for what Suno++ will plug into.
+`suno-desktop://open?path=/song/<id>` (path must be a suno.com path: no `//host`, backslashes or control characters). A second launch forwards its argv to the running instance through the single-instance lock. `suno-desktop://plugin/install?id=…` and `suno-desktop://theme/install?id=…` turn on a Suno++ plugin or theme after asking (and turn Suno++ on first, also after asking).
+
+## Suno++
+
+Community plugins and themes come from [Suno++](https://github.com/Cat-things/sunoplusplus). `src/main/sunoplusplus/manager.ts` downloads its desktop bundle from GitHub releases when the user turns it on, checks sizes and SHA-256 hashes against the release's `desktop.json`, keeps it in `sunoplusplus/`, injects it into the plugin world with the user's choices, and installs newer releases while the app runs, swapping the running version on the page without a reload. See [Suno++ and the plugin hooks](PLUGIN_HOOKS.md).

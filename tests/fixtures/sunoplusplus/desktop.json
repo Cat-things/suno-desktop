@@ -1,0 +1,18 @@
+{
+  "formatVersion": 1,
+  "version": "0.1.0",
+  "bridgeApi": 1,
+  "minDesktopVersion": "0.1.0",
+  "files": {
+    "bundle": {
+      "name": "sunoplusplus.js",
+      "size": 23562,
+      "sha256": "26ce228958ef2e0b0e8224e3fcff7e56b1e5d3301756c3bd0795387ac54106b0"
+    },
+    "catalog": {
+      "name": "catalog.json",
+      "size": 2512,
+      "sha256": "dc0d48f569195ab9ea95aa1d0eb24c03d1428b2dfb5bff7de3d6ffb9dec8fede"
+    }
+  }
+}

@@ -3,6 +3,7 @@
  * Google sign-in page are faked by intercepting https inside the app's own session, so the
  * suite is deterministic and never talks to Suno. Screenshots land in test-results/e2e.
  */
+import { createHash } from 'node:crypto'
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -11,12 +12,14 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { InjectionRegistry } from '../../src/main/injection/registry'
 import type { MediaController } from '../../src/main/media/media-controller'
 import type { SettingsStore } from '../../src/main/settings-store'
+import type { SunoPlusPlusManager } from '../../src/main/sunoplusplus/manager'
 import type { MainWindow } from '../../src/main/windows/main-window'
 import { COVER_ID, FAKE_SUNO_HTML, silentWav } from './fake-suno'
 
 interface Hooks {
   settings: SettingsStore
   injection: InjectionRegistry
+  sunoPlusPlus: SunoPlusPlusManager
   media: MediaController
   mainWindow: MainWindow
   openDeepLink(url: string): void
@@ -105,11 +108,21 @@ function suno(urlPath: string): Promise<void> {
 }
 
 async function screenshot(name: string, page: string): Promise<void> {
-  const png = await app.evaluate(async ({ webContents }, target) => {
+  const png = await app.evaluate(async ({ webContents, BrowserWindow }, target) => {
     const wc = webContents
       .getAllWebContents()
       .find((w) => w.getURL().startsWith(target) || w.getURL().endsWith(target))
     if (!wc) return null
+    // A window behind another one keeps its last frame; bring it forward and let it repaint
+    // (and finish its toggle transitions) before capturing.
+    const win = BrowserWindow.fromWebContents(wc)
+    if (win && !win.isFocused()) win.focus()
+    await Promise.race([
+      wc.executeJavaScript(
+        'new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 300))))'
+      ),
+      new Promise((r) => setTimeout(r, 2000))
+    ])
     return (await wc.capturePage()).toPNG().toString('base64')
   }, page)
   if (png) writeFileSync(path.join(artifacts, `${name}.png`), Buffer.from(png, 'base64'))
@@ -641,6 +654,226 @@ describe('reset app settings', () => {
       (v) => !v,
       'skip onboarding'
     )
+  })
+})
+
+describe('Suno++', () => {
+  const fixtures = path.join(root, 'tests', 'fixtures', 'sunoplusplus')
+  const repo = 'https://github.com/Cat-things/sunoplusplus'
+  const v1 = readFileSync(path.join(fixtures, 'sunoplusplus.js'), 'utf8')
+  const catalog = readFileSync(path.join(fixtures, 'catalog.json'), 'utf8')
+  const sha = (text: string) => createHash('sha256').update(text).digest('hex')
+
+  /** The files of a Suno++ release, keyed by the URLs the app's updater downloads. */
+  function releaseFiles(version: string, bundle: string): Record<string, string> {
+    const desktop = {
+      formatVersion: 1,
+      version,
+      bridgeApi: 1,
+      minDesktopVersion: '0.1.0',
+      files: {
+        bundle: { name: 'sunoplusplus.js', size: Buffer.byteLength(bundle), sha256: sha(bundle) },
+        catalog: { name: 'catalog.json', size: Buffer.byteLength(catalog), sha256: sha(catalog) }
+      }
+    }
+    return {
+      [`${repo}/releases/latest/download/desktop.json`]: JSON.stringify(desktop),
+      [`${repo}/releases/download/v${version}/sunoplusplus.js`]: bundle,
+      [`${repo}/releases/download/v${version}/catalog.json`]: catalog
+    }
+  }
+
+  /** Stands in for GitHub in the default session, where the updater's net.fetch goes. */
+  async function serve(files: Record<string, string>): Promise<void> {
+    await app.evaluate(({ session }, served) => {
+      const g = globalThis as unknown as {
+        __sppFiles: Record<string, string>
+        __sppRequests?: string[]
+      }
+      g.__sppFiles = served
+      if (g.__sppRequests) return
+      g.__sppRequests = []
+      session.defaultSession.protocol.handle('https', (request) => {
+        g.__sppRequests?.push(request.url)
+        const body = g.__sppFiles[request.url]
+        return body === undefined ? new Response('not found', { status: 404 }) : new Response(body)
+      })
+    }, files)
+  }
+
+  const requests = () =>
+    app.evaluate(() => (globalThis as unknown as { __sppRequests: string[] }).__sppRequests)
+
+  /** Runs code in the plugin world on suno.com, where Suno++ runs. */
+  function inPluginWorld<T>(code: string): Promise<T> {
+    return app.evaluate(async (_electron, js) => {
+      const h = (globalThis as unknown as { __sunoDesktopE2E: Hooks }).__sunoDesktopE2E
+      return (await h.mainWindow.contents.executeJavaScriptInIsolatedWorld(1001, [
+        { code: js }
+      ])) as T
+    }, code)
+  }
+
+  const sunoTitle = (expected: string) =>
+    waitFor(
+      () => inSuno<string>('document.title'),
+      (t) => t === expected,
+      `title "${expected}"`
+    )
+
+  it('is off by default and downloads nothing', async () => {
+    await serve(releaseFiles('0.1.0', v1))
+    expect(await hooks((h) => h.settings.get().sunoPlusPlusEnabled)).toBe(false)
+    await hooks((h) => h.openSettings())
+    await waitFor(
+      () => inLocal<boolean>('settings.html', `!!document.getElementById('spp-check')`),
+      Boolean,
+      'settings window'
+    )
+    expect(await requests()).toEqual([])
+  })
+
+  it('downloads the latest release when turned on in Settings', async () => {
+    await inLocal(
+      'settings.html',
+      `document.querySelector('[data-tab="plugins"]').click();
+       document.querySelector('input[data-setting="sunoPlusPlusEnabled"]').click()`
+    )
+    await waitFor(
+      () => hooks((h) => h.sunoPlusPlus.info().installedVersion),
+      (v) => v === '0.1.0',
+      'Suno++ 0.1.0 installed'
+    )
+    expect(await requests()).toEqual([
+      `${repo}/releases/latest/download/desktop.json`,
+      `${repo}/releases/download/v0.1.0/sunoplusplus.js`,
+      `${repo}/releases/download/v0.1.0/catalog.json`
+    ])
+    await waitFor(
+      () => inLocal<string>('settings.html', `document.getElementById('spp-status').textContent`),
+      (t) => t.startsWith('Up to date'),
+      'up to date status'
+    )
+    expect(
+      await inLocal<boolean>(
+        'settings.html',
+        `!!document.getElementById('spp-plugin-now-playing-title')`
+      )
+    ).toBe(true)
+  })
+
+  it('runs a community plugin on suno.com when it is turned on', async () => {
+    await inSuno(`navigator.mediaSession.playbackState = 'playing'`)
+    await inLocal(
+      'settings.html',
+      `document.getElementById('spp-plugin-now-playing-title').click()`
+    )
+    await sunoTitle('♪ Neon Rain — Lamp')
+    await waitFor(
+      () =>
+        inLocal<boolean>(
+          'settings.html',
+          `!!document.getElementById('spp-setting-now-playing-title-showArtist')`
+        ),
+      Boolean,
+      'plugin settings'
+    )
+    await inLocal(
+      'settings.html',
+      `document.getElementById('spp-setting-now-playing-title-showArtist').click()`
+    )
+    await sunoTitle('♪ Neon Rain')
+    await screenshot('settings-plugins', 'app://ui/settings.html')
+  })
+
+  it('applies a community theme', async () => {
+    await inLocal(
+      'settings.html',
+      `document.querySelector('[data-tab="themes"]').click();
+       document.getElementById('spp-theme-neon-accents').click()`
+    )
+    await waitFor(
+      () =>
+        inSuno<string>(
+          `getComputedStyle(document.documentElement).getPropertyValue('--spp-accent').trim()`
+        ),
+      (v) => v === '#ff2e97',
+      'theme colors on suno.com'
+    )
+    await waitFor(
+      () =>
+        inLocal<boolean>(
+          'settings.html',
+          `!!document.getElementById('spp-color-neon-accents-accent')`
+        ),
+      Boolean,
+      'theme colors in settings'
+    )
+    await screenshot('settings-themes', 'app://ui/settings.html')
+  })
+
+  it('updates itself to a new release without reloading the page', async () => {
+    await serve(releaseFiles('0.1.1', v1.replaceAll('"0.1.0"', '"0.1.1"')))
+    await inLocal('settings.html', `document.getElementById('spp-check').click()`)
+    await waitFor(
+      () => hooks((h) => h.sunoPlusPlus.info().installedVersion),
+      (v) => v === '0.1.1',
+      'Suno++ 0.1.1 installed'
+    )
+    await waitFor(
+      () =>
+        inPluginWorld<string | undefined>(
+          `globalThis[Symbol.for('sunoplusplus.runtime')]?.version`
+        ),
+      (v) => v === '0.1.1',
+      '0.1.1 running on the page'
+    )
+    // The new version took over the song that was already playing, and the theme.
+    expect(await inSuno<string>('document.title')).toBe('♪ Neon Rain')
+    expect(await inSuno<number>(`document.querySelectorAll('#sunoplusplus-theme').length`)).toBe(1)
+  })
+
+  it('stops everything on the open page when turned off', async () => {
+    await inLocal(
+      'settings.html',
+      `document.querySelector('[data-tab="plugins"]').click();
+       document.querySelector('input[data-setting="sunoPlusPlusEnabled"]').click()`
+    )
+    await sunoTitle('Fake Suno')
+    expect(await inSuno<number>(`document.querySelectorAll('#sunoplusplus-theme').length`)).toBe(0)
+    expect(
+      await inPluginWorld<string>(`typeof globalThis[Symbol.for('sunoplusplus.runtime')]`)
+    ).toBe('undefined')
+  })
+
+  it('turns Suno++ and a plugin on from a suno-desktop:// link, after asking', async () => {
+    await hooks((h) =>
+      h.sunoPlusPlus.act({ type: 'setPluginEnabled', id: 'now-playing-title', enabled: false })
+    )
+    await app.evaluate(({ dialog }) => {
+      const g = globalThis as unknown as { __dialogs: string[] }
+      g.__dialogs = []
+      dialog.showMessageBox = ((_parent: unknown, options: { message: string }) => {
+        g.__dialogs.push(options.message)
+        return Promise.resolve({ response: 0, checkboxChecked: false })
+      }) as typeof dialog.showMessageBox
+    })
+    await hooks((h) => {
+      h.openDeepLink('suno-desktop://plugin/install?id=now-playing-title')
+    })
+    await waitFor(
+      () => hooks((h) => h.settings.get().sunoPlusPlus.enabled['now-playing-title']),
+      (v) => v === true,
+      'plugin turned on by the link'
+    )
+    expect(await hooks((h) => h.settings.get().sunoPlusPlusEnabled)).toBe(true)
+    expect(
+      await app.evaluate(() => (globalThis as unknown as { __dialogs: string[] }).__dialogs)
+    ).toEqual(['Turn on Suno++?', 'Turn on Now playing in the tab title?'])
+    await sunoTitle('♪ Neon Rain')
+    // Leave the app as other tests expect it.
+    await hooks((h) => h.settings.update({ sunoPlusPlusEnabled: false }))
+    await sunoTitle('Fake Suno')
   })
 })
 

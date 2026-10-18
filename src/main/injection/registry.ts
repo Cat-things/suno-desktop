@@ -1,8 +1,8 @@
 import { isSunoAppUrl } from '../../shared/url-policy'
 
 /**
- * Registry for scripts and styles injected into suno.com. The core app registers nothing; this
- * is the seam the Suno++ plugin host will use. See docs/PLUGIN_HOOKS.md.
+ * Registry for scripts and styles injected into suno.com. Suno++ (src/main/sunoplusplus/) is
+ * its user. See docs/PLUGIN_HOOKS.md.
  */
 
 export type InjectionWorld = 'main' | 'isolated'
@@ -23,6 +23,14 @@ export interface InjectionEntry {
   readonly world: InjectionWorld
   /** When `js` runs. CSS is kept in sync with `matches` on both triggers regardless. */
   readonly runOn: readonly InjectionTrigger[]
+}
+
+/** A script to run once on the open suno.com page, see `InjectionRegistry.runNow`. */
+export interface OneShotScript {
+  readonly id: string
+  readonly owner: string
+  readonly js: string
+  readonly world: InjectionWorld
 }
 
 const ID = /^[a-z0-9][a-z0-9._-]{0,127}$/i
@@ -68,10 +76,12 @@ export function validateEntry(entry: InjectionEntry): string | null {
 }
 
 export type RegistryListener = () => void
+export type RunListener = (script: OneShotScript) => void
 
 export class InjectionRegistry {
   private readonly entries = new Map<string, InjectionEntry>()
   private readonly listeners = new Set<RegistryListener>()
+  private readonly runListeners = new Set<RunListener>()
 
   /** Adds or replaces an entry. Returns a function that removes it. */
   register(entry: InjectionEntry): () => void {
@@ -119,6 +129,22 @@ export class InjectionRegistry {
   onChange(listener: RegistryListener): () => void {
     this.listeners.add(listener)
     return () => this.listeners.delete(listener)
+  }
+
+  /**
+   * Runs `script` once on the suno.com page that is open right now (nothing happens on other
+   * pages, and nothing is remembered for later loads). For undoing what a registered script did,
+   * e.g. stopping a plugin runtime when the user turns it off.
+   */
+  runNow(script: OneShotScript): void {
+    if (!ID.test(script.id) || !ID.test(script.owner)) throw new Error('invalid one-shot script id')
+    if (script.js.length > MAX_SOURCE) throw new Error('one-shot script too large')
+    for (const listener of this.runListeners) listener(script)
+  }
+
+  onRun(listener: RunListener): () => void {
+    this.runListeners.add(listener)
+    return () => this.runListeners.delete(listener)
   }
 
   private emit(): void {

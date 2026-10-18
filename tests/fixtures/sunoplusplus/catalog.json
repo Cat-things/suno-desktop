@@ -1,0 +1,104 @@
+{
+  "formatVersion": 1,
+  "sunoplusplusVersion": "0.1.0",
+  "plugins": [
+    {
+      "manifestVersion": 1,
+      "id": "now-playing-title",
+      "name": "Now playing in the tab title",
+      "description": "Shows the song that's playing in the browser tab (or Suno Desktop's title bar), so you can find it at a glance.",
+      "version": "1.0.0",
+      "authors": [
+        {
+          "name": "Suno++ team",
+          "github": "Cat-things"
+        }
+      ],
+      "license": "MIT",
+      "tags": [
+        "player",
+        "quality-of-life"
+      ],
+      "matches": [
+        "https://suno.com/*"
+      ],
+      "world": "isolated",
+      "enabledByDefault": false,
+      "settings": [
+        {
+          "key": "showArtist",
+          "label": "Show the artist",
+          "type": "boolean",
+          "default": true
+        },
+        {
+          "key": "showWhenPaused",
+          "label": "Keep it while paused",
+          "description": "Otherwise Suno's own title comes back when you pause.",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "key": "symbol",
+          "label": "Symbol",
+          "type": "select",
+          "default": "note",
+          "options": [
+            {
+              "value": "note",
+              "label": "♪ Note"
+            },
+            {
+              "value": "play",
+              "label": "▶ Play"
+            },
+            {
+              "value": "none",
+              "label": "None"
+            }
+          ]
+        }
+      ],
+      "path": "plugins/now-playing-title"
+    }
+  ],
+  "themes": [
+    {
+      "manifestVersion": 1,
+      "id": "neon-accents",
+      "name": "Neon accents",
+      "description": "Recolors text selection, focus rings, scrollbars, sliders and the text cursor in a color you pick. A small starter theme to build on.",
+      "version": "1.0.0",
+      "authors": [
+        {
+          "name": "Suno++ team",
+          "github": "Cat-things"
+        }
+      ],
+      "license": "MIT",
+      "tags": [
+        "starter",
+        "accent"
+      ],
+      "matches": [
+        "https://suno.com/*"
+      ],
+      "appearance": "any",
+      "variables": [
+        {
+          "key": "accent",
+          "label": "Accent",
+          "type": "color",
+          "default": "#ff2e97"
+        },
+        {
+          "key": "on-accent",
+          "label": "Text on accent",
+          "type": "color",
+          "default": "#ffffff"
+        }
+      ],
+      "path": "themes/neon-accents"
+    }
+  ]
+}

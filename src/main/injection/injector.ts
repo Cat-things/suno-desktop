@@ -2,14 +2,14 @@ import type { WebContents } from 'electron'
 import { PLUGIN_WORLD_ID } from '../../shared/constants'
 import { isSunoAppUrl } from '../../shared/url-policy'
 import type { Logger } from '../logger'
-import type { InjectionEntry, InjectionRegistry, InjectionTrigger } from './registry'
+import type { InjectionEntry, InjectionRegistry, InjectionTrigger, OneShotScript } from './registry'
 
 interface InsertedCss {
   readonly key: string
   readonly css: string
 }
 
-function wrapScript(entry: InjectionEntry): string {
+function wrapScript(entry: Pick<InjectionEntry, 'id' | 'js'>): string {
   // Each script is isolated in its own try/catch so one broken plugin cannot break the others.
   return `(() => {\ntry {\n${entry.js ?? ''}\n} catch (error) {\nconsole.error('[suno-desktop] injection ' + ${JSON.stringify(entry.id)} + ' failed', error)\n}\n})()`
 }
@@ -21,8 +21,10 @@ function wrapScript(entry: InjectionEntry): string {
  */
 export class Injector {
   private css = new Map<string, InsertedCss>()
-  private ran = new Set<string>()
+  /** Entry id → the code that ran for it on this document, so changed code runs again. */
+  private ran = new Map<string, string>()
   private disposeRegistry: (() => void) | null = null
+  private disposeRun: (() => void) | null = null
 
   constructor(
     private readonly contents: WebContents,
@@ -34,7 +36,7 @@ export class Injector {
     this.contents.on('dom-ready', () => {
       // New document: previously inserted CSS and executed scripts are gone.
       this.css = new Map()
-      this.ran = new Set()
+      this.ran = new Map()
       void this.sync('load')
     })
     this.contents.on('did-navigate-in-page', (_event, _url, isMainFrame) => {
@@ -43,12 +45,20 @@ export class Injector {
     this.disposeRegistry = this.registry.onChange(() => {
       void this.sync(null)
     })
+    this.disposeRun = this.registry.onRun((script) => {
+      if (!this.contents.isDestroyed() && isSunoAppUrl(this.contents.getURL()))
+        void this.run(script)
+    })
     this.contents.once('destroyed', () => {
       this.disposeRegistry?.()
+      this.disposeRun?.()
     })
   }
 
-  /** `trigger` is null when the registry changed: sync CSS and run newly added `load` scripts. */
+  /**
+   * `trigger` is null when the registry changed: sync CSS and run `load` scripts that are new or
+   * whose code changed since they last ran on this document.
+   */
   private async sync(trigger: InjectionTrigger | null): Promise<void> {
     if (this.contents.isDestroyed()) return
     const url = this.contents.getURL()
@@ -74,13 +84,13 @@ export class Injector {
     if (!isSunoAppUrl(url)) return
     const scripts =
       trigger === null
-        ? this.registry.scriptsFor(url, 'load').filter((e) => !this.ran.has(e.id))
+        ? this.registry.scriptsFor(url, 'load').filter((e) => this.ran.get(e.id) !== e.js)
         : this.registry.scriptsFor(url, trigger)
     for (const entry of scripts) await this.run(entry)
   }
 
-  private async run(entry: InjectionEntry): Promise<void> {
-    this.ran.add(entry.id)
+  private async run(entry: InjectionEntry | OneShotScript): Promise<void> {
+    if ('runOn' in entry) this.ran.set(entry.id, entry.js ?? '')
     const code = wrapScript(entry)
     try {
       if (entry.world === 'main') {

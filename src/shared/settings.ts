@@ -1,11 +1,12 @@
 import { z } from 'zod'
+import { EMPTY_SPP_STATE, sppStateSchema } from './sunoplusplus'
 
 /**
  * Settings schema and migrations. The store in the main process persists the output of
  * `migrateSettings`, so anything read from disk passes through here first.
  */
 
-export const SETTINGS_VERSION = 2
+export const SETTINGS_VERSION = 3
 
 export const ZOOM_MIN = 0.5
 export const ZOOM_MAX = 3
@@ -33,7 +34,11 @@ const userSettingsShape = {
   zoomFactor: z.number().min(ZOOM_MIN).max(ZOOM_MAX),
   updateChannel: updateChannelSchema,
   /** Lets packaged builds open DevTools (dev builds always can). */
-  allowDevTools: z.boolean()
+  allowDevTools: z.boolean(),
+  /** Community plugins and themes from Suno++. Off until the user turns it on (it downloads code). */
+  sunoPlusPlusEnabled: z.boolean(),
+  /** Keep Suno++ up to date from its GitHub releases. */
+  sunoPlusPlusAutoUpdate: z.boolean()
 }
 
 export const settingsSchema = z.object({
@@ -42,7 +47,9 @@ export const settingsSchema = z.object({
   /** Internal: the "still running in the tray" toast has been shown once. */
   trayHintShown: z.boolean(),
   /** Internal: the first-launch onboarding was finished (reset by "Reset app settings"). */
-  onboardingCompleted: z.boolean()
+  onboardingCompleted: z.boolean(),
+  /** Internal: which Suno++ plugins are on, their settings, the theme and its colors. */
+  sunoPlusPlus: sppStateSchema
 })
 
 export type Settings = z.infer<typeof settingsSchema>
@@ -60,8 +67,11 @@ export const DEFAULT_SETTINGS: Settings = Object.freeze({
   zoomFactor: 1,
   updateChannel: 'stable',
   allowDevTools: false,
+  sunoPlusPlusEnabled: false,
+  sunoPlusPlusAutoUpdate: true,
   trayHintShown: false,
-  onboardingCompleted: false
+  onboardingCompleted: false,
+  sunoPlusPlus: EMPTY_SPP_STATE
 })
 
 /**
@@ -84,10 +94,12 @@ export type Migration = (input: Record<string, unknown>) => Record<string, unkno
  * - 0 -> 1: "no version field"; no build ever wrote that shape, so it is read as v1.
  * - 1 -> 2: adds `theme` and onboarding. People upgrading from 0.1.x already set the app up,
  *   so they skip the first-launch onboarding (`theme` falls back to its default, `system`).
+ * - 2 -> 3: adds Suno++; the new fields start at their defaults (off).
  */
 export const MIGRATIONS: Readonly<Record<number, Migration>> = {
   0: (input) => input,
-  1: (input) => ({ onboardingCompleted: true, ...input })
+  1: (input) => ({ onboardingCompleted: true, ...input }),
+  2: (input) => input
 }
 
 export interface MigrationResult {

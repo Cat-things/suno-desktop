@@ -9,7 +9,7 @@
 | `pnpm lint`, `pnpm typecheck`, `pnpm format:check` | ESLint (strict type-checked), `tsc` for main/preload/UI, Prettier  | Ubuntu                           |
 | Build Windows workflow                             | NSIS installer and portable exes (unsigned), uploaded as artifacts | windows-latest, every push       |
 
-**Unit tests** (`tests/*.test.ts`): URL allowlist and popup policy, deep link parser (open, plugin and theme routes), settings schema and migrations (defaults such as Discord off, the v1 → v2 upgrade, which fields are patchable), IPC contracts (sender roles, origins, payloads), media snapshot sanitizing, keyboard shortcuts, user agent cleanup, permission policy, download file names, `app://` path resolution, window layout and state, injection registry, Discord framing and presence.
+**Unit tests** (`tests/*.test.ts`): URL allowlist and popup policy, deep link parser (open, plugin and theme routes), settings schema and migrations (defaults such as Discord off, the v1 → v2 upgrade, which fields are patchable), IPC contracts (sender roles, origins, payloads), media snapshot sanitizing, keyboard shortcuts, user agent cleanup, permission policy, download file names, `app://` path resolution, window layout and state, injection registry, Discord framing and presence, and Suno++: release and catalog formats, the user's choices and allowed actions, the stop script, and the manager against a fake GitHub (download, SHA-256 and size checks, updates without downgrades, apps too old for a release, a damaged copy on disk, turning it off, one check at a time).
 
 **End-to-end tests** (`tests/e2e/app.e2e.ts`) launch the real app with an isolated user-data folder and intercept `https` inside the app's own `persist:suno` session, so suno.com, its CDN and Google sign-in are served by a small fake page that uses `navigator.mediaSession`. Nothing talks to Suno. They check:
 
@@ -23,9 +23,10 @@
 - the settings window applies valid patches, rejects invalid ones and wrong-role callers, and zoom reaches the suno.com view;
 - a fresh profile shows the onboarding on top of suno.com; picking Dark switches the title bar and onboarding to dark right away, finishing saves the theme and hides it, and the next launch skips it;
 - **Reset app settings** does nothing when cancelled; when confirmed it restores the defaults and shows the onboarding again, while the suno.com cookies stay in place;
+- Suno++, with GitHub faked in the default session serving the real Suno++ 0.1.0 release files (`tests/fixtures/sunoplusplus`): nothing is downloaded while it's off; turning it on in Settings downloads and verifies it; turning on the now-playing plugin changes the suno.com title, and its settings apply live; a theme's colors reach suno.com; a newer release installs from **Check for updates** and replaces the running version without a reload, keeping the song; turning Suno++ off restores the page; a `suno-desktop://plugin/install` link asks twice and turns Suno++ and the plugin on;
 - the main process log has no errors (on Windows this covers creating the tray and taskbar thumbnail buttons).
 
-Screenshots of the title bar, settings (light and dark), offline page and onboarding (welcome and theme steps) are written to `test-results/e2e` and uploaded as CI artifacts.
+Screenshots of the title bar, settings (light and dark), offline page, onboarding (welcome and theme steps) and the Plugins and Themes tabs are written to `test-results/e2e` and uploaded as CI artifacts.
 
 On Linux run `xvfb-run -a pnpm test:e2e`. As root, Chromium needs `--no-sandbox`, which the suite passes on Linux.
 
@@ -86,8 +87,8 @@ Use Win+R or a browser address bar.
 - [ ] `suno-desktop://open?path=/create` with the app closed: app starts on the Create page.
 - [ ] Same with the app running (and minimized to tray): the existing window comes to front and navigates; no second instance.
 - [ ] `suno-desktop://open?path=//example.com` is ignored.
-- [ ] `suno-desktop://plugin/install?id=test` shows "Plugins aren't available yet".
-- [ ] `suno-desktop://theme/install?id=test` shows "Themes aren't available yet".
+- [ ] `suno-desktop://plugin/install?id=now-playing-title` asks to turn on Suno++ (if off), then asks to turn the plugin on; Cancel at either step changes nothing.
+- [ ] `suno-desktop://plugin/install?id=does-not-exist` explains it couldn't find it.
 - [ ] Launching the app a second time from the Start menu focuses the existing window.
 
 ### Downloads
@@ -117,6 +118,16 @@ Needs a build with a real Discord application id in `config/app.config.json`, an
 - [ ] Zoom slider matches Ctrl+Plus/Minus and persists.
 - [ ] Advanced → **Reset app settings**: Cancel changes nothing. Reset puts every setting back to its default (theme Auto, Discord off, tray and startup defaults), shows the welcome again, and you are **still signed in** to Suno.
 - [ ] About page shows the version and the "not affiliated with Suno, Inc." notice; links open GitHub in the browser.
+
+### Suno++
+
+- [ ] Fresh install: Settings → Plugins shows Suno++ **Off**, nothing downloaded (no `sunoplusplus` folder in `%APPDATA%/Suno Desktop`).
+- [ ] Turn it on: status goes Checking → Downloading → "Up to date"; plugin cards appear, all off.
+- [ ] Turn on **Now playing in the tab title** while a song plays: the title bar shows `♪ Song — Artist`; its settings apply without reloading; turning it off restores Suno's title.
+- [ ] Themes tab: picking **Neon accents** recolors text selection and focus rings on suno.com; the color pickers preview live; **Reset colors** and "Suno's own look" undo it.
+- [ ] After a new Suno++ release on GitHub: **Check for updates** installs it while music keeps playing (no reload), and the version in Settings changes.
+- [ ] Offline: **Check for updates** says it couldn't reach GitHub and keeps the installed version working.
+- [ ] Turning Suno++ off removes the plugins and theme from the open page immediately.
 
 ### Offline
 

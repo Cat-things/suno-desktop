@@ -1,13 +1,16 @@
+import path from 'node:path'
 import {
   app,
   BrowserWindow,
   dialog,
   nativeTheme,
+  net,
   Notification,
   session,
   type Session
 } from 'electron'
-import { APP_NAME, SUNO_PARTITION } from '../shared/constants'
+import { APP_NAME, BRIDGE_API_VERSION, SUNO_PARTITION } from '../shared/constants'
+import type { ReservedLink } from '../shared/deep-link'
 import { IPC, type AppInfo } from '../shared/ipc-channels'
 import type { Settings, ThemeSource } from '../shared/settings'
 import iconPath from '../../resources/icon.png?asset'
@@ -25,11 +28,10 @@ import type { Logger } from './logger'
 import { MediaController } from './media/media-controller'
 import { ThumbarButtons } from './media/thumbar'
 import { devServerUrl, isDev, isPortable, rendererRoot } from './paths'
-import { createPluginHost, pluginsDirFor, type PluginHost } from './plugins'
-import { createThemeHost, themesDirFor, type ThemeHost } from './themes'
 import { hardenSunoSession } from './security'
 import type { SettingsStore } from './settings-store'
 import { applyLoginItem } from './startup'
+import { SunoPlusPlusManager } from './sunoplusplus/manager'
 import { AppTray } from './tray'
 import { Updater } from './updater'
 import { WindowStateStore } from './window-state-store'
@@ -50,8 +52,7 @@ export class AppController {
   private readonly thumbar: ThumbarButtons
   private readonly richPresence: RichPresence
   private readonly updater: Updater
-  private readonly pluginHost: PluginHost
-  private readonly themeHost: ThemeHost
+  private readonly sunoPlusPlus: SunoPlusPlusManager
   private quitting = false
   private readonly hardwareAccelerationAtLaunch: boolean
 
@@ -139,27 +140,18 @@ export class AppController {
       if (state.status === 'downloaded') this.notifyUpdateReady(state.version)
     })
 
-    this.pluginHost = createPluginHost(
-      {
-        pluginsDir: pluginsDirFor(this.userData),
-        injection: this.injection,
-        session: this.sunoSession,
-        log: log.child('plugins')
-      },
-      () => {
-        this.showPluginsUnavailable()
-      }
-    )
-    this.themeHost = createThemeHost(
-      {
-        themesDir: themesDirFor(this.userData),
-        injection: this.injection,
-        log: log.child('themes')
-      },
-      () => {
-        this.showThemesUnavailable()
-      }
-    )
+    this.sunoPlusPlus = new SunoPlusPlusManager({
+      dir: path.join(this.userData, 'sunoplusplus'),
+      settings,
+      injection: this.injection,
+      log: log.child('suno++'),
+      appVersion: app.getVersion(),
+      bridgeApi: BRIDGE_API_VERSION,
+      fetch: (url, init) => net.fetch(url, init)
+    })
+    this.sunoPlusPlus.on('info', (info) => {
+      this.settingsWindow.contents?.send(IPC.sunoPlusPlusInfo, info)
+    })
 
     this.wireEvents()
     registerIpcHandlers(new IpcRouter(this.roles, { devServerUrl }, log.child('ipc')), {
@@ -168,8 +160,7 @@ export class AppController {
       settings,
       media: this.media,
       updater: this.updater,
-      pluginHost: this.pluginHost,
-      themeHost: this.themeHost,
+      sunoPlusPlus: this.sunoPlusPlus,
       openSettings: () => {
         this.openSettings()
       },
@@ -200,6 +191,7 @@ export class AppController {
       __sunoDesktopE2E: {
         settings: this.settings,
         injection: this.injection,
+        sunoPlusPlus: this.sunoPlusPlus,
         media: this.media,
         mainWindow: this.mainWindow,
         openDeepLink: (url: string) => {
@@ -249,6 +241,7 @@ export class AppController {
       this.windowState.flush()
       this.richPresence.dispose()
       this.updater.dispose()
+      this.sunoPlusPlus.dispose()
     })
     app.on('window-all-closed', () => {
       app.quit()
@@ -257,6 +250,7 @@ export class AppController {
 
   /** Shows the window unless the app was launched hidden (login item / start minimized). */
   start(hidden: boolean): void {
+    void this.sunoPlusPlus.start()
     const win = this.mainWindow.window
     const onboarding = !this.settings.get().onboardingCompleted
     if (onboarding) this.mainWindow.showOnboarding()
@@ -279,8 +273,9 @@ export class AppController {
         this.mainWindow.show()
         this.mainWindow.loadUrl(url)
       },
-      pluginHost: () => this.pluginHost,
-      themeHost: () => this.themeHost
+      sunoPlusPlus: (link) => {
+        void this.handleSunoPlusPlusLink(link)
+      }
     })
   }
 
@@ -316,6 +311,7 @@ export class AppController {
       this.mainWindow.show()
       this.mainWindow.showOnboarding()
     }
+    this.sunoPlusPlus.onSettingsChanged(next, previous)
     if (next.updateChannel !== previous.updateChannel) {
       this.updater.setChannel(next.updateChannel)
       this.updater.check()
@@ -347,26 +343,78 @@ export class AppController {
     notification.show()
   }
 
-  private showPluginsUnavailable(): void {
+  /**
+   * `suno-desktop://plugin/install?id=…` and `suno-desktop://theme/install?id=…` (from the Suno++
+   * site or a friend). Everything in Suno++ is already reviewed and bundled, so "install" means
+   * "turn on", and nothing happens without the user saying yes.
+   */
+  private async handleSunoPlusPlusLink(
+    link: ReservedLink<'plugin'> | ReservedLink<'theme'>
+  ): Promise<void> {
     this.mainWindow.show()
-    void dialog.showMessageBox(this.mainWindow.window, {
-      type: 'info',
-      title: APP_NAME,
-      message: "Plugins aren't available yet",
-      detail:
-        'This link is meant for Suno++ plugins. A future version of Suno Desktop will support them.'
+    const parent = this.mainWindow.window
+    const what = link.kind
+    const id = link.params['id']
+    const ask = async (options: Electron.MessageBoxOptions): Promise<boolean> =>
+      (
+        await dialog.showMessageBox(parent, {
+          title: APP_NAME,
+          defaultId: 0,
+          cancelId: 1,
+          ...options
+        })
+      ).response === 0
+    if ((link.action !== 'install' && link.action !== 'enable') || !id) {
+      await dialog.showMessageBox(parent, {
+        type: 'info',
+        title: APP_NAME,
+        message: "This Suno++ link isn't supported",
+        detail: 'It may need a newer version of Suno Desktop.'
+      })
+      return
+    }
+    if (!this.settings.get().sunoPlusPlusEnabled) {
+      const turnOn = await ask({
+        type: 'question',
+        buttons: ['Turn on Suno++', 'Cancel'],
+        message: 'Turn on Suno++?',
+        detail:
+          `This link adds a community ${what}. Suno++ downloads community plugins and themes ` +
+          'from GitHub (github.com/Cat-things/sunoplusplus) and keeps them up to date. ' +
+          'Each one stays off until you turn it on.'
+      })
+      if (!turnOn) return
+      this.settings.update({ sunoPlusPlusEnabled: true })
+    }
+    await this.sunoPlusPlus.check()
+    const catalog = this.sunoPlusPlus.catalog()
+    const item =
+      what === 'plugin'
+        ? catalog?.plugins.find((p) => p.id === id)
+        : catalog?.themes.find((t) => t.id === id)
+    if (!item) {
+      await dialog.showMessageBox(parent, {
+        type: 'info',
+        title: APP_NAME,
+        message: `Couldn't find that ${what}`,
+        detail: catalog
+          ? `"${id}" isn't in Suno++ ${catalog.sunoplusplusVersion}. If it was just added, try again later.`
+          : "Suno++ couldn't be downloaded. Check your connection and try again in Settings → Plugins."
+      })
+      return
+    }
+    const yes = await ask({
+      type: 'question',
+      buttons: [what === 'plugin' ? 'Turn on' : 'Use theme', 'Cancel'],
+      message: what === 'plugin' ? `Turn on ${item.name}?` : `Use the ${item.name} theme?`,
+      detail: `${item.description}\n\nBy ${item.authors.map((a) => a.name).join(', ')} · version ${item.version}`
     })
-  }
-
-  private showThemesUnavailable(): void {
-    this.mainWindow.show()
-    void dialog.showMessageBox(this.mainWindow.window, {
-      type: 'info',
-      title: APP_NAME,
-      message: "Themes aren't available yet",
-      detail:
-        'This link is meant for Suno++ themes. A future version of Suno Desktop will support them.'
-    })
+    if (!yes) return
+    this.sunoPlusPlus.act(
+      what === 'plugin'
+        ? { type: 'setPluginEnabled', id: item.id, enabled: true }
+        : { type: 'setTheme', id: item.id }
+    )
   }
 
   private appInfo(): AppInfo {
@@ -379,11 +427,7 @@ export class AppController {
       arch: process.arch,
       isPackaged: app.isPackaged,
       isPortable: isPortable(),
-      pluginsDir: this.pluginHost.pluginsDir,
-      themesDir: this.themeHost.themesDir,
       discordConfigured: appConfig.discordClientId !== null,
-      pluginsAvailable: this.pluginHost.available,
-      themesAvailable: this.themeHost.available,
       hardwareAccelerationAtLaunch: this.hardwareAccelerationAtLaunch
     }
   }

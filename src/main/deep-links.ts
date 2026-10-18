@@ -2,10 +2,9 @@ import path from 'node:path'
 import { app } from 'electron'
 import { DEEP_LINK_SCHEME } from '../shared/constants'
 import { parseDeepLink } from '../shared/deep-link'
+import type { ReservedLink } from '../shared/deep-link'
 import type { Logger } from './logger'
 import { executablePath } from './paths'
-import type { PluginHost } from './plugins'
-import type { ThemeHost } from './themes'
 
 /**
  * Registers `suno-desktop://` for the current user. The NSIS installer registers it as well
@@ -27,8 +26,8 @@ export function registerProtocolClient(log: Logger): void {
 export interface DeepLinkTargets {
   readonly log: Logger
   readonly openUrl: (url: string) => void
-  readonly pluginHost: () => PluginHost | null
-  readonly themeHost: () => ThemeHost | null
+  /** `suno-desktop://plugin/…` and `suno-desktop://theme/…`, handled by Suno++. */
+  readonly sunoPlusPlus: (link: ReservedLink<'plugin'> | ReservedLink<'theme'>) => void
 }
 
 export function handleDeepLink(raw: string, targets: DeepLinkTargets): void {
@@ -38,16 +37,11 @@ export function handleDeepLink(raw: string, targets: DeepLinkTargets): void {
       targets.log.info('deep link: open', link.url)
       targets.openUrl(link.url)
       break
-    case 'plugin': {
-      const host = targets.pluginHost()
-      if (host) void host.handleDeepLink(link)
+    case 'plugin':
+    case 'theme':
+      targets.log.info(`deep link: ${link.kind}/${link.action}`, link.params)
+      targets.sunoPlusPlus(link)
       break
-    }
-    case 'theme': {
-      const host = targets.themeHost()
-      if (host) void host.handleDeepLink(link)
-      break
-    }
     case 'invalid':
       targets.log.warn(`ignored deep link: ${link.reason}`)
       break
