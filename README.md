@@ -18,6 +18,9 @@ Its own window, real media keys, a tray icon, and music that keeps playing when 
 <a href="https://github.com/Cat-things/suno-desktop/releases/latest">
   <img src="https://img.shields.io/badge/Download_for_Windows-x64_%26_ARM64-7c4dff?style=for-the-badge" alt="Download for Windows (x64 and ARM64)" height="40">
 </a>
+<a href="https://www.youtube.com/watch?v=biQnxupaj-w">
+  <img src="https://img.shields.io/badge/Watch_the_trailer-YouTube-ff0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch the trailer on YouTube" height="40">
+</a>
 
 <sub>Unofficial and open source · not affiliated with, sponsored by or endorsed by Suno, Inc.</sub>
 
@@ -29,6 +32,18 @@ Its own window, real media keys, a tray icon, and music that keeps playing when 
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/settings-general-dark.png">
   <img src="docs/images/settings-general-light.png" alt="The Suno Desktop settings window: Windows 11 style sidebar, cards and toggle switches">
 </picture>
+
+## 🎬 Watch the trailer
+
+<div align="center">
+
+<a href="https://www.youtube.com/watch?v=biQnxupaj-w">
+  <img src="https://img.youtube.com/vi/biQnxupaj-w/hqdefault.jpg" alt="Suno Desktop trailer on YouTube" width="560">
+</a>
+
+**[▶️ Watch the Suno Desktop trailer on YouTube](https://www.youtube.com/watch?v=biQnxupaj-w)**
+
+</div>
 
 ## ✨ Why?
 
